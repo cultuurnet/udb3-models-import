@@ -24,7 +24,8 @@ class CategoryExistsValidator extends Validator
                 'id',
                 (new CategoryIDExistsValidator($categoryResolver))
                     ->setTemplate('term {{name}} does not exist or is not applicable for ' . $documentType),
-                false),
+                false
+            ),
         ];
 
         parent::__construct($rules);
