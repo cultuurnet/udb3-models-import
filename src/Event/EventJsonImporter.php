@@ -20,10 +20,9 @@ use CultuurNet\UDB3\Location\Location;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\JsonImporterInterface;
+use CultuurNet\UDB3\Model\Import\Taxonomy\Category\CategoryResolver;
 use CultuurNet\UDB3\Model\Place\ImmutablePlace;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\Category;
-use CultuurNet\UDB3\Offer\ThemeResolverInterface;
-use CultuurNet\UDB3\Offer\TypeResolverInterface;
 use CultuurNet\UDB3\ReadModel\JsonDocument;
 use CultuurNet\UDB3\Theme;
 use CultuurNet\UDB3\Title;
@@ -54,14 +53,9 @@ class EventJsonImporter implements JsonImporterInterface
     private $serializer;
 
     /**
-     * @var TypeResolverInterface
+     * @var CategoryResolver
      */
-    private $typeResolver;
-
-    /**
-     * @var ThemeResolverInterface
-     */
-    private $themeResolver;
+    private $categoryResolver;
 
     /**
      * @var CommandBusInterface
@@ -72,16 +66,14 @@ class EventJsonImporter implements JsonImporterInterface
         DocumentRepositoryInterface $eventDocumentRepository,
         DocumentRepositoryInterface $placeDocumentRepository,
         Serializer $serializer,
-        CommandBusInterface $commandBus,
-        TypeResolverInterface $typeResolver,
-        ThemeResolverInterface $themeResolver
+        CategoryResolver $categoryResolver,
+        CommandBusInterface $commandBus
     ) {
         $this->eventDocumentRepository = $eventDocumentRepository;
         $this->placeDocumentRepository = $placeDocumentRepository;
         $this->serializer = $serializer;
+        $this->categoryResolver = $categoryResolver;
         $this->commandBus = $commandBus;
-        $this->typeResolver = $typeResolver;
-        $this->themeResolver = $themeResolver;
     }
 
     /**
@@ -120,19 +112,15 @@ class EventJsonImporter implements JsonImporterInterface
         );
 
         $categories = array_map(
-            function (Category $category) {
-                try {
-                    return $this->typeResolver->byId(new StringLiteral($category->getId()->toString()));
-                } catch (\Exception $e) {
+            function (Category $category) use ($errors) {
+                $resolvedCategory = $this->categoryResolver->byId($category->getId());
+
+                if (!$resolvedCategory) {
+                    $id = $category->getId()->toString();
+                    $errors[] = "Term with id '{$id}' does not exist or is not applicable to event.";
                 }
 
-                try {
-                    return $this->themeResolver->byId(new StringLiteral($category->getId()->toString()));
-                } catch (\Exception $e) {
-                }
-
-                // @todo Add facility resolver etc. Ideally we'd have one single CategoryResolver.
-                return null;
+                return $resolvedCategory;
             },
             $import->getTerms()->toArray()
         );
