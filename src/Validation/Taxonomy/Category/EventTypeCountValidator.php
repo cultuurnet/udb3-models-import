@@ -29,7 +29,7 @@ class EventTypeCountValidator extends Validator
 
                         return count($eventTypes) == 1;
                     }
-                ))->setTemplate('terms must contain at exactly one item with domain "eventtype".'),
+                ))->setTemplate('terms must contain exactly one item with domain "eventtype".'),
                 new AlwaysValid()
             )
         ];
