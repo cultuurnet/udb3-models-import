@@ -7,7 +7,7 @@ use CultuurNet\UDB3\Model\Import\Taxonomy\Category\EventTypeCountValidator;
 use PHPUnit\Framework\TestCase;
 use Respect\Validation\Exceptions\GroupedValidationException;
 
-class EventTypeValidatorTest extends TestCase
+class EventTypeCountValidatorTest extends TestCase
 {
     /**
      * @var EventTypeCountValidator
