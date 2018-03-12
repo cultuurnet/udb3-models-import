@@ -12,7 +12,7 @@ class EventTypeCountValidator extends Validator
 {
     public function __construct()
     {
-        // Only check that there is at least one "eventtype" term if the
+        // Only check that there is exactly one "eventtype" term if the
         // categories are in the expected format.
         // Any other errors will be reported by the validators in udb3-models.
         $rules = [
