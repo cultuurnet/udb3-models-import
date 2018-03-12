@@ -20,7 +20,7 @@ use CultuurNet\UDB3\Location\Location;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\JsonImporterInterface;
-use CultuurNet\UDB3\Model\Import\Taxonomy\Category\CategoryResolver;
+use CultuurNet\UDB3\Model\Import\Taxonomy\Category\CategoryResolverInterface;
 use CultuurNet\UDB3\Model\Place\ImmutablePlace;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\Category;
 use CultuurNet\UDB3\ReadModel\JsonDocument;
@@ -53,7 +53,7 @@ class EventJsonImporter implements JsonImporterInterface
     private $serializer;
 
     /**
-     * @var CategoryResolver
+     * @var CategoryResolverInterface
      */
     private $categoryResolver;
 
@@ -66,7 +66,6 @@ class EventJsonImporter implements JsonImporterInterface
         DocumentRepositoryInterface $eventDocumentRepository,
         DocumentRepositoryInterface $placeDocumentRepository,
         Serializer $serializer,
-        CategoryResolver $categoryResolver,
         CommandBusInterface $commandBus
     ) {
         $this->eventDocumentRepository = $eventDocumentRepository;
