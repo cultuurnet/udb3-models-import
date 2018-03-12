@@ -11,7 +11,7 @@ use CultuurNet\UDB3\Offer\TypeResolverInterface;
 use CultuurNet\UDB3\Symfony\Offer\OfferFacilityResolverInterface;
 use ValueObjects\StringLiteral\StringLiteral;
 
-class LegacyBridgeCategoryResolver implements CategoryResolver
+class LegacyBridgeCategoryResolver implements CategoryResolverInterface
 {
     /**
      * @var TypeResolverInterface

@@ -5,7 +5,7 @@ namespace CultuurNet\UDB3\Model\Import\Taxonomy\Category;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\Category;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\CategoryID;
 
-interface CategoryResolver
+interface CategoryResolverInterface
 {
     /**
      * @param CategoryID $categoryID
