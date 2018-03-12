@@ -74,7 +74,7 @@ class EventTypeCountValidatorTest extends TestCase
         ];
 
         $expected = [
-            'terms must contain exactly 1 item with domain eventtype.',
+            'terms must contain exactly 1 item(s) with domain eventtype.',
         ];
 
         try {
@@ -106,7 +106,7 @@ class EventTypeCountValidatorTest extends TestCase
         ];
 
         $expected = [
-            'terms must contain exactly 1 item with domain eventtype.',
+            'terms must contain exactly 1 item(s) with domain eventtype.',
         ];
 
         try {

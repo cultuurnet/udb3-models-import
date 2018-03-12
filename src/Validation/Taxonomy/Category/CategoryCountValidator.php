@@ -22,9 +22,11 @@ class CategoryCountValidator extends Validator
         $domain = $domain->toString();
 
         if (is_null($max)) {
-            $error = "{{name}} must contain at least {$min} items with domain {$domain}.";
+            $error = "{{name}} must contain at least {$min} item(s) with domain {$domain}.";
+        } elseif ($min === 0) {
+            $error = "{{name}} must contain at most {$max} item(s) with domain {$domain}.";
         } elseif ($min === $max) {
-            $error = "{{name}} must contain exactly {$min} item with domain {$domain}.";
+            $error = "{{name}} must contain exactly {$min} item(s) with domain {$domain}.";
         } else {
             $error = "{{name}} must contain at least {$min} and at most {$max} items with domain {$domain}.";
         }
