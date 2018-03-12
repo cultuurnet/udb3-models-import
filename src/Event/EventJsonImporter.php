@@ -95,7 +95,7 @@ class EventJsonImporter implements JsonImporterInterface
                 'json'
             );
         } catch (DocumentGoneException $e) {
-            $current = null;
+            throw new ValidationException('The Event with the given id has been deleted and cannot be re-created.');
         }
 
         $errors = [];
