@@ -3,16 +3,24 @@
 namespace CultuurNet\UDB3\Model\Import\Event;
 
 use Broadway\CommandHandling\CommandBusInterface;
+use CultuurNet\UDB3\Address\Address;
 use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
-use CultuurNet\UDB3\Event\Commands\UpdateAudience;
+use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
+use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
+use CultuurNet\UDB3\Event\Commands\UpdateLocation;
+use CultuurNet\UDB3\Event\Commands\UpdateTheme;
 use CultuurNet\UDB3\Event\Commands\UpdateTitle;
+use CultuurNet\UDB3\Event\Commands\UpdateType;
 use CultuurNet\UDB3\Event\EventType;
 use CultuurNet\UDB3\Event\ReadModel\DocumentGoneException;
 use CultuurNet\UDB3\Event\ReadModel\DocumentRepositoryInterface;
 use CultuurNet\UDB3\Language;
+use CultuurNet\UDB3\Location\Location;
+use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\JsonImporterInterface;
+use CultuurNet\UDB3\Model\Place\ImmutablePlace;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\Category;
 use CultuurNet\UDB3\Offer\ThemeResolverInterface;
 use CultuurNet\UDB3\Offer\TypeResolverInterface;
@@ -24,12 +32,21 @@ use Respect\Validation\Exceptions\ValidationException;
 use Symfony\Component\Serializer\Serializer;
 use ValueObjects\StringLiteral\StringLiteral;
 
+/**
+ * @todo Move validation errors to a separate EventImportValidator so they can be combined
+ * with the the errors from EventValidator.
+ */
 class EventJsonImporter implements JsonImporterInterface
 {
     /**
      * @var DocumentRepositoryInterface
      */
-    private $documentRepository;
+    private $eventDocumentRepository;
+
+    /**
+     * @var DocumentRepositoryInterface
+     */
+    private $placeDocumentRepository;
 
     /**
      * @var Serializer
@@ -52,13 +69,15 @@ class EventJsonImporter implements JsonImporterInterface
     private $commandBus;
 
     public function __construct(
-        DocumentRepositoryInterface $documentRepository,
+        DocumentRepositoryInterface $eventDocumentRepository,
+        DocumentRepositoryInterface $placeDocumentRepository,
         Serializer $serializer,
         CommandBusInterface $commandBus,
         TypeResolverInterface $typeResolver,
         ThemeResolverInterface $themeResolver
     ) {
-        $this->documentRepository = $documentRepository;
+        $this->eventDocumentRepository = $eventDocumentRepository;
+        $this->placeDocumentRepository = $placeDocumentRepository;
         $this->serializer = $serializer;
         $this->commandBus = $commandBus;
         $this->typeResolver = $typeResolver;
@@ -77,7 +96,7 @@ class EventJsonImporter implements JsonImporterInterface
         $import = $this->serializer->deserialize($data, Event::class, 'json');
 
         try {
-            $currentDocument = $this->documentRepository->get($id);
+            $currentDocument = $this->eventDocumentRepository->get($id);
 
             $current = $this->serializer->deserialize(
                 $currentDocument->getRawBody(),
@@ -148,6 +167,42 @@ class EventJsonImporter implements JsonImporterInterface
             $theme = null;
         }
 
+        $placeId = $import->getPlaceReference()->getPlaceId();
+        $placeJsonDocument = null;
+        $location = null;
+
+        try {
+            $placeJsonDocument = $this->placeDocumentRepository->get($placeId->toString());
+            if ($placeId->sameAs(ImmutablePlace::getDummyLocationId())) {
+                $errors = 'Can not import events with a dummy location.';
+            } elseif (!$placeJsonDocument) {
+                $errors = 'The given location id does not exist.';
+            }
+        } catch (DocumentGoneException $e) {
+            $errors = 'The given location id is deleted and can not be coupled to the event.';
+        }
+
+        if ($placeJsonDocument) {
+            $placeJson = $placeJsonDocument->getBody();
+
+            $placeMainLanguage = isset($placeJson->mainLanguage) ? $placeJson->mainLanguage : 'nl';
+            $placeName = $placeJson->name;
+            if (is_array($placeName)) {
+                $placeName = $placeName[$placeMainLanguage];
+            }
+
+            $placeAddress = $placeJson->address;
+            if (is_array($placeAddress)) {
+                $placeAddress = $placeAddress[$placeMainLanguage];
+            }
+
+            $location = new Location(
+                $import->getPlaceReference()->getPlaceId()->toString(),
+                new StringLiteral($placeName),
+                Address::deserialize($placeAddress)
+            );
+        }
+
         $calendar = Calendar::fromUdb3ModelCalendar($import->getCalendar());
 
         $publishDate = $import->getAvailableFrom();
@@ -173,21 +228,34 @@ class EventJsonImporter implements JsonImporterInterface
                 $theme,
                 $publishDate
             );
-
-            /* @var \CultuurNet\UDB3\Model\ValueObject\Translation\Language $language */
-            foreach ($import->getTitle()->getLanguages() as $language) {
-                if ($language->sameAs($import->getMainLanguage())) {
-                    continue;
-                }
-
-                $commands[] = new UpdateTitle(
-                    $id,
-                    Language::fromUdb3ModelLanguage($language),
-                    Title::fromUdb3ModelTitle($import->getTitle()->getTranslation($language))
-                );
-            }
         } else {
+            $commands[] = new UpdateTitle(
+                $id,
+                $mainLanguage,
+                $title
+            );
 
+            $commands[] = new UpdateType($id, $type);
+            $commands[] = new UpdateLocation($id, new LocationId($placeId->toString()));
+            $commands[] = new UpdateCalendar($id, $calendar);
+            $commands[] = new UpdateTheme($id, $theme);
+
+            if (!is_null($publishDate)) {
+                $commands[] = new Publish($id, $publishDate);
+            }
+        }
+
+        /* @var \CultuurNet\UDB3\Model\ValueObject\Translation\Language $language */
+        foreach ($import->getTitle()->getLanguages() as $language) {
+            if ($language->sameAs($import->getMainLanguage())) {
+                continue;
+            }
+
+            $commands[] = new UpdateTitle(
+                $id,
+                Language::fromUdb3ModelLanguage($language),
+                Title::fromUdb3ModelTitle($import->getTitle()->getTranslation($language))
+            );
         }
 
         foreach ($commands as $command) {
