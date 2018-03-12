@@ -5,6 +5,7 @@ namespace CultuurNet\UDB3\Model\Import\Event;
 use Broadway\CommandHandling\CommandBusInterface;
 use CultuurNet\UDB3\Address\Address;
 use CultuurNet\UDB3\Calendar;
+use CultuurNet\UDB3\Category;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
@@ -20,9 +21,7 @@ use CultuurNet\UDB3\Location\Location;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\JsonImporterInterface;
-use CultuurNet\UDB3\Model\Import\Taxonomy\Category\CategoryResolverInterface;
 use CultuurNet\UDB3\Model\Place\ImmutablePlace;
-use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\Category;
 use CultuurNet\UDB3\ReadModel\JsonDocument;
 use CultuurNet\UDB3\Theme;
 use CultuurNet\UDB3\Title;
@@ -53,11 +52,6 @@ class EventJsonImporter implements JsonImporterInterface
     private $serializer;
 
     /**
-     * @var CategoryResolverInterface
-     */
-    private $categoryResolver;
-
-    /**
      * @var CommandBusInterface
      */
     private $commandBus;
@@ -71,7 +65,6 @@ class EventJsonImporter implements JsonImporterInterface
         $this->eventDocumentRepository = $eventDocumentRepository;
         $this->placeDocumentRepository = $placeDocumentRepository;
         $this->serializer = $serializer;
-        $this->categoryResolver = $categoryResolver;
         $this->commandBus = $commandBus;
     }
 
@@ -111,20 +104,15 @@ class EventJsonImporter implements JsonImporterInterface
         );
 
         $categories = array_map(
-            function (Category $category) use ($errors) {
-                $resolvedCategory = $this->categoryResolver->byId($category->getId());
-
-                if (!$resolvedCategory) {
-                    $id = $category->getId()->toString();
-                    $errors[] = "Term with id '{$id}' does not exist or is not applicable to event.";
-                }
-
-                return $resolvedCategory;
+            function (array $category) {
+                return new Category(
+                    $category['id'],
+                    $category['label'],
+                    $category['domain']
+                );
             },
             $import->getTerms()->toArray()
         );
-        $categories = array_filter($categories);
-        $categories = array_values($categories);
 
         $types = array_filter(
             $categories,
@@ -132,12 +120,7 @@ class EventJsonImporter implements JsonImporterInterface
                 return $category instanceof EventType;
             }
         );
-        if (count($types) !== 1) {
-            $errors[] = 'Event must have exactly one term with domain "eventtype".';
-            $type = null;
-        } else {
-            $type = reset($types);
-        }
+        $type = reset($types);
 
         $themes = array_filter(
             $categories,
@@ -145,14 +128,7 @@ class EventJsonImporter implements JsonImporterInterface
                 return $category instanceof Theme;
             }
         );
-        if (count($themes) > 1) {
-            $errors[] = 'Event can\'t have more than one term with domain "theme".';
-            $theme = null;
-        } elseif (count($themes) == 1) {
-            $theme = reset($themes);
-        } else {
-            $theme = null;
-        }
+        $theme = count($themes) > 0 ? reset($themes) : null;
 
         $placeId = $import->getPlaceReference()->getPlaceId();
         $placeJsonDocument = null;
@@ -169,6 +145,8 @@ class EventJsonImporter implements JsonImporterInterface
             $errors = 'The given location id is deleted and can not be coupled to the event.';
         }
 
+        // @todo Refactor CreateEvent, Event::create(), and EventCreated to use LocationID instead
+        // of Location. Afterwards this whole block can be simplified.
         if ($placeJsonDocument) {
             $placeJson = $placeJsonDocument->getBody();
 
