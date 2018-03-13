@@ -2,15 +2,16 @@
 
 namespace CultuurNet\UDB3\Model\Import\PreProcessing;
 
-use CultuurNet\UDB3\Model\Import\JsonImporterInterface;
+use CultuurNet\UDB3\Model\Import\DecodedDocument;
+use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\Taxonomy\Category\CategoryResolverInterface;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\CategoryID;
 use CultuurNet\UDB3\ReadModel\JsonDocument;
 
-class TermPreProcessingJsonImporter implements JsonImporterInterface
+class TermPreProcessingDocumentImporter implements DocumentImporterInterface
 {
     /**
-     * @var JsonImporterInterface
+     * @var DocumentImporterInterface
      */
     private $jsonImporter;
 
@@ -20,11 +21,11 @@ class TermPreProcessingJsonImporter implements JsonImporterInterface
     private $categoryResolver;
 
     /**
-     * @param JsonImporterInterface $jsonImporter
+     * @param DocumentImporterInterface $jsonImporter
      * @param CategoryResolverInterface $categoryResolver
      */
     public function __construct(
-        JsonImporterInterface $jsonImporter,
+        DocumentImporterInterface $jsonImporter,
         CategoryResolverInterface $categoryResolver
     ) {
         $this->jsonImporter = $jsonImporter;
@@ -34,11 +35,11 @@ class TermPreProcessingJsonImporter implements JsonImporterInterface
     /**
      * Pre-processes the JSON to polyfill missing term properties if possible.
      *
-     * @param JsonDocument $jsonDocument
+     * @param DecodedDocument $decodedDocument
      */
-    public function import(JsonDocument $jsonDocument)
+    public function import(DecodedDocument $decodedDocument)
     {
-        $data = json_decode($jsonDocument->getRawBody(), true);
+        $data = $decodedDocument->getBody();
 
         // Attempt to add label and/or domain to terms, or fix them if they're incorrect.
         if (isset($data['terms']) && is_array($data['terms'])) {
@@ -60,11 +61,8 @@ class TermPreProcessingJsonImporter implements JsonImporterInterface
             );
         }
 
-        $jsonDocument = new JsonDocument(
-            $jsonDocument->getId(),
-            json_encode($data)
-        );
+        $decodedDocument = $decodedDocument->withBody($data);
 
-        $this->jsonImporter->import($jsonDocument);
+        $this->jsonImporter->import($decodedDocument);
     }
 }

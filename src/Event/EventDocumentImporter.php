@@ -19,17 +19,18 @@ use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\Location;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
-use CultuurNet\UDB3\Model\Import\JsonImporterInterface;
+use CultuurNet\UDB3\Model\Import\DecodedDocument;
+use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\Category;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\CategoryDomain;
-use CultuurNet\UDB3\ReadModel\JsonDocument;
 use CultuurNet\UDB3\Theme;
 use CultuurNet\UDB3\Title;
 use Respect\Validation\Exceptions\ValidationException;
+use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\Serializer;
 use ValueObjects\StringLiteral\StringLiteral;
 
-class EventJsonImporter implements JsonImporterInterface
+class EventDocumentImporter implements DocumentImporterInterface
 {
     /**
      * @var DocumentRepositoryInterface
@@ -37,9 +38,9 @@ class EventJsonImporter implements JsonImporterInterface
     private $eventDocumentRepository;
 
     /**
-     * @var Serializer
+     * @var DenormalizerInterface
      */
-    private $serializer;
+    private $eventDenormalizer;
 
     /**
      * @var CommandBusInterface
@@ -48,30 +49,32 @@ class EventJsonImporter implements JsonImporterInterface
 
     public function __construct(
         DocumentRepositoryInterface $eventDocumentRepository,
-        Serializer $serializer,
+        DenormalizerInterface $eventDenormalizer,
         CommandBusInterface $commandBus
     ) {
         $this->eventDocumentRepository = $eventDocumentRepository;
-        $this->serializer = $serializer;
+        $this->eventDenormalizer = $eventDenormalizer;
         $this->commandBus = $commandBus;
     }
 
     /**
-     * @param JsonDocument $jsonDocument
+     * @inheritdoc
      */
-    public function import(JsonDocument $jsonDocument)
+    public function import(DecodedDocument $decodedDocument)
     {
-        $id = $jsonDocument->getId();
-        $data = $jsonDocument->getRawBody();
+        $id = $decodedDocument->getId();
 
+        // Try to get the current document to check that it hasn't been deleted in the past,
+        // before we validate and denormalize the import data.
         try {
+            $current = null;
             $currentDocument = $this->eventDocumentRepository->get($id);
 
-            $current = $this->serializer->deserialize(
-                $currentDocument->getRawBody(),
-                Event::class,
-                'json'
-            );
+            if ($currentDocument) {
+                $currentDocument = DecodedDocument::fromJsonDocument($currentDocument);
+                $currentData = $currentDocument->getBody();
+                $current = $this->eventDenormalizer->denormalize($currentData, Event::class);
+            }
         } catch (DocumentGoneException $e) {
             throw new ValidationException('The Event with the given id has been deleted and cannot be re-created.');
         } catch (\Exception $e) {
@@ -79,7 +82,8 @@ class EventJsonImporter implements JsonImporterInterface
         }
 
         /* @var Event $import */
-        $import = $this->serializer->deserialize($data, Event::class, 'json');
+        $importData = $decodedDocument->getBody();
+        $import = $this->eventDenormalizer->denormalize($importData, Event::class);
 
         $mainLanguage = Language::fromUdb3ModelLanguage(
             $import->getMainLanguage()

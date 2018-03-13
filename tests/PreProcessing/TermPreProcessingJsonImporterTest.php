@@ -2,8 +2,9 @@
 
 namespace CultuurNet\UDB3\Model\Import\PreProcessing;
 
+use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\Event\EventLegacyBridgeCategoryResolver;
-use CultuurNet\UDB3\Model\Import\JsonImporterInterface;
+use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\ReadModel\JsonDocument;
 use PHPUnit\Framework\TestCase;
 use Respect\Validation\Exceptions\ValidationException;
@@ -11,7 +12,7 @@ use Respect\Validation\Exceptions\ValidationException;
 class TermPreProcessingJsonImporterTest extends TestCase
 {
     /**
-     * @var JsonImporterInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var DocumentImporterInterface|\PHPUnit_Framework_MockObject_MockObject
      */
     private $importer;
 
@@ -21,16 +22,16 @@ class TermPreProcessingJsonImporterTest extends TestCase
     private $categoryResolver;
 
     /**
-     * @var TermPreProcessingJsonImporter
+     * @var TermPreProcessingDocumentImporter
      */
     private $preProcessor;
 
     public function setUp()
     {
-        $this->importer = $this->createMock(JsonImporterInterface::class);
+        $this->importer = $this->createMock(DocumentImporterInterface::class);
         $this->categoryResolver = new EventLegacyBridgeCategoryResolver();
 
-        $this->preProcessor = new TermPreProcessingJsonImporter(
+        $this->preProcessor = new TermPreProcessingDocumentImporter(
             $this->importer,
             $this->categoryResolver
         );
@@ -42,7 +43,7 @@ class TermPreProcessingJsonImporterTest extends TestCase
     public function it_should_supplement_missing_term_fields()
     {
         $data = $this->getRequiredEventJsonData();
-        $document = $this->getJsonDocument($this->getEventId(), $data);
+        $document = $this->getDecodedDocument($this->getEventId(), $data);
 
         $expected = $data;
         $expected['terms'][0] = [
@@ -50,8 +51,8 @@ class TermPreProcessingJsonImporterTest extends TestCase
             'label' => 'Begeleide rondleiding',
             'domain' => 'eventtype',
         ];
-        $expectedDocument = $this->getJsonDocument($this->getEventId(), $expected);
-        $this->expectJsonDocument($expectedDocument);
+        $expectedDocument = $this->getDecodedDocument($this->getEventId(), $expected);
+        $this->expectImportDocument($expectedDocument);
 
         $this->preProcessor->import($document);
     }
@@ -63,9 +64,9 @@ class TermPreProcessingJsonImporterTest extends TestCase
     {
         $data = $this->getRequiredEventJsonData();
         unset($data['terms']);
-        $document = $this->getJsonDocument($this->getEventId(), $data);
+        $document = $this->getDecodedDocument($this->getEventId(), $data);
 
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -78,9 +79,9 @@ class TermPreProcessingJsonImporterTest extends TestCase
         $data = $this->getRequiredEventJsonData();
         $data['terms'] = 'foo,bar';
 
-        $document = $this->getJsonDocument($this->getEventId(), $data);
+        $document = $this->getDecodedDocument($this->getEventId(), $data);
 
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -93,7 +94,7 @@ class TermPreProcessingJsonImporterTest extends TestCase
         $data = $this->getRequiredEventJsonData();
         $data['terms'][1] = ['label' => 'concert', 'domain' => 'eventtype'];
 
-        $document = $this->getJsonDocument($this->getEventId(), $data);
+        $document = $this->getDecodedDocument($this->getEventId(), $data);
 
         $expected = $data;
         $expected['terms'][0] = [
@@ -102,8 +103,8 @@ class TermPreProcessingJsonImporterTest extends TestCase
             'domain' => 'eventtype',
         ];
 
-        $expectedDocument = $this->getJsonDocument($this->getEventId(), $expected);
-        $this->expectJsonDocument($expectedDocument);
+        $expectedDocument = $this->getDecodedDocument($this->getEventId(), $expected);
+        $this->expectImportDocument($expectedDocument);
 
         $this->preProcessor->import($document);
     }
@@ -116,7 +117,7 @@ class TermPreProcessingJsonImporterTest extends TestCase
         $data = $this->getRequiredEventJsonData();
         $data['terms'][1] = ['id' => 12345];
 
-        $document = $this->getJsonDocument($this->getEventId(), $data);
+        $document = $this->getDecodedDocument($this->getEventId(), $data);
 
         $expected = $data;
         $expected['terms'][0] = [
@@ -125,8 +126,8 @@ class TermPreProcessingJsonImporterTest extends TestCase
             'domain' => 'eventtype',
         ];
 
-        $expectedDocument = $this->getJsonDocument($this->getEventId(), $expected);
-        $this->expectJsonDocument($expectedDocument);
+        $expectedDocument = $this->getDecodedDocument($this->getEventId(), $expected);
+        $this->expectImportDocument($expectedDocument);
 
         $this->preProcessor->import($document);
     }
@@ -139,7 +140,7 @@ class TermPreProcessingJsonImporterTest extends TestCase
         $data = $this->getRequiredEventJsonData();
         $data['terms'][1] = ['id' => '100.100.100.100.100'];
 
-        $document = $this->getJsonDocument($this->getEventId(), $data);
+        $document = $this->getDecodedDocument($this->getEventId(), $data);
 
         $expected = $data;
         $expected['terms'][0] = [
@@ -148,8 +149,8 @@ class TermPreProcessingJsonImporterTest extends TestCase
             'domain' => 'eventtype',
         ];
 
-        $expectedDocument = $this->getJsonDocument($this->getEventId(), $expected);
-        $this->expectJsonDocument($expectedDocument);
+        $expectedDocument = $this->getDecodedDocument($this->getEventId(), $expected);
+        $this->expectImportDocument($expectedDocument);
 
         $this->preProcessor->import($document);
     }
@@ -166,7 +167,7 @@ class TermPreProcessingJsonImporterTest extends TestCase
             'domain' => 'eventtype',
         ];
 
-        $document = $this->getJsonDocument($this->getEventId(), $data);
+        $document = $this->getDecodedDocument($this->getEventId(), $data);
 
         $expected = $data;
         $expected['terms'][0] = [
@@ -175,8 +176,8 @@ class TermPreProcessingJsonImporterTest extends TestCase
             'domain' => 'eventtype',
         ];
 
-        $expectedDocument = $this->getJsonDocument($this->getEventId(), $expected);
-        $this->expectJsonDocument($expectedDocument);
+        $expectedDocument = $this->getDecodedDocument($this->getEventId(), $expected);
+        $this->expectImportDocument($expectedDocument);
 
         $this->preProcessor->import($document);
     }
@@ -193,7 +194,7 @@ class TermPreProcessingJsonImporterTest extends TestCase
             'domain' => 'eventtype INCORRECT',
         ];
 
-        $document = $this->getJsonDocument($this->getEventId(), $data);
+        $document = $this->getDecodedDocument($this->getEventId(), $data);
 
         $expected = $data;
         $expected['terms'][0] = [
@@ -207,8 +208,8 @@ class TermPreProcessingJsonImporterTest extends TestCase
             'domain' => 'eventtype',
         ];
 
-        $expectedDocument = $this->getJsonDocument($this->getEventId(), $expected);
-        $this->expectJsonDocument($expectedDocument);
+        $expectedDocument = $this->getDecodedDocument($this->getEventId(), $expected);
+        $this->expectImportDocument($expectedDocument);
 
         $this->preProcessor->import($document);
     }
@@ -243,31 +244,15 @@ class TermPreProcessingJsonImporterTest extends TestCase
         return 'c33b4498-0932-4fbe-816f-c6641f30ba3b';
     }
 
-    private function getJsonDocument($id, array $data)
+    private function getDecodedDocument($id, array $data)
     {
-        return new JsonDocument($id, json_encode($data));
+        return new DecodedDocument($id, $data);
     }
 
-    private function expectJsonDocument(JsonDocument $jsonDocument)
+    private function expectImportDocument(DecodedDocument $decodedDocument)
     {
         $this->importer->expects($this->once())
             ->method('import')
-            ->with(
-                $this->callback(
-                    function (JsonDocument $actual) use ($jsonDocument) {
-                        $this->assertEquals(
-                            $jsonDocument->getId(),
-                            $actual->getId()
-                        );
-
-                        $this->assertEquals(
-                            $jsonDocument->getBody(),
-                            $actual->getBody()
-                        );
-
-                        return true;
-                    }
-                )
-            );
+            ->with($decodedDocument);
     }
 }

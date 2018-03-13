@@ -4,8 +4,9 @@ namespace CultuurNet\UDB3\Model\Import\PreProcessing;
 
 use CultuurNet\UDB3\Event\ReadModel\DocumentGoneException;
 use CultuurNet\UDB3\Event\ReadModel\DocumentRepositoryInterface;
+use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\Event\EventLegacyBridgeCategoryResolver;
-use CultuurNet\UDB3\Model\Import\JsonImporterInterface;
+use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Place\PlaceIDParser;
 use CultuurNet\UDB3\ReadModel\JsonDocument;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +15,7 @@ use Respect\Validation\Exceptions\ValidationException;
 class LocationPreProcessingJsonImporterTest extends TestCase
 {
     /**
-     * @var JsonImporterInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var DocumentImporterInterface|\PHPUnit_Framework_MockObject_MockObject
      */
     private $importer;
 
@@ -29,17 +30,17 @@ class LocationPreProcessingJsonImporterTest extends TestCase
     private $placeDocumentRepository;
 
     /**
-     * @var TermPreProcessingJsonImporter
+     * @var TermPreProcessingDocumentImporter
      */
     private $preProcessor;
 
     public function setUp()
     {
-        $this->importer = $this->createMock(JsonImporterInterface::class);
+        $this->importer = $this->createMock(DocumentImporterInterface::class);
         $this->placeIdParser = new PlaceIDParser();
         $this->placeDocumentRepository = $this->createMock(DocumentRepositoryInterface::class);
 
-        $this->preProcessor = new LocationPreProcessingJsonImporter(
+        $this->preProcessor = new LocationPreProcessingDocumentImporter(
             $this->importer,
             $this->placeIdParser,
             $this->placeDocumentRepository
@@ -52,18 +53,18 @@ class LocationPreProcessingJsonImporterTest extends TestCase
     public function it_should_supplement_location_data()
     {
         $placeData = $this->getRequiredPlaceJsonData();
-        $placeDocument = $this->getJsonDocument($this->getPlaceId(), $placeData);
-        $this->expectPlace($placeDocument);
+        $placeDocument = $this->getDecodedDocument($this->getPlaceId(), $placeData);
+        $this->expectPlace($placeDocument->toJsonDocument());
 
         $eventData = $this->getRequiredEventJsonData();
-        $eventDocument = $this->getJsonDocument($this->getEventId(), $eventData);
+        $eventDocument = $this->getDecodedDocument($this->getEventId(), $eventData);
 
         $expectedData = $eventData;
         $expectedData['location'] = $placeData;
 
-        $expectedDocument = $this->getJsonDocument($this->getEventId(), $expectedData);
+        $expectedDocument = $this->getDecodedDocument($this->getEventId(), $expectedData);
 
-        $this->expectJsonDocument($expectedDocument);
+        $this->expectImportDocument($expectedDocument);
 
         $this->preProcessor->import($eventDocument);
     }
@@ -76,9 +77,9 @@ class LocationPreProcessingJsonImporterTest extends TestCase
         $eventData = $this->getRequiredEventJsonData();
         unset($eventData['location']);
 
-        $document = $this->getJsonDocument($this->getEventId(), $eventData);
+        $document = $this->getDecodedDocument($this->getEventId(), $eventData);
 
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -91,9 +92,9 @@ class LocationPreProcessingJsonImporterTest extends TestCase
         $eventData = $this->getRequiredEventJsonData();
         $eventData['location'] = $this->getPlaceId();
 
-        $document = $this->getJsonDocument($this->getEventId(), $eventData);
+        $document = $this->getDecodedDocument($this->getEventId(), $eventData);
 
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -106,9 +107,9 @@ class LocationPreProcessingJsonImporterTest extends TestCase
         $eventData = $this->getRequiredEventJsonData();
         $eventData['location'] = ['name' => ['nl' => 'Foo bar']];
 
-        $document = $this->getJsonDocument($this->getEventId(), $eventData);
+        $document = $this->getDecodedDocument($this->getEventId(), $eventData);
 
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -121,9 +122,9 @@ class LocationPreProcessingJsonImporterTest extends TestCase
         $eventData = $this->getRequiredEventJsonData();
         $eventData['location'] = ['@id' => 123456];
 
-        $document = $this->getJsonDocument($this->getEventId(), $eventData);
+        $document = $this->getDecodedDocument($this->getEventId(), $eventData);
 
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -136,9 +137,9 @@ class LocationPreProcessingJsonImporterTest extends TestCase
         $eventData = $this->getRequiredEventJsonData();
         $eventData['location'] = ['@id' => $this->getPlaceId()];
 
-        $document = $this->getJsonDocument($this->getEventId(), $eventData);
+        $document = $this->getDecodedDocument($this->getEventId(), $eventData);
 
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -151,9 +152,9 @@ class LocationPreProcessingJsonImporterTest extends TestCase
         $eventData = $this->getRequiredEventJsonData();
         $eventData['location'] = ['@id' => 'http://io.uitdatabank.be/events/' . $this->getPlaceId()];
 
-        $document = $this->getJsonDocument($this->getEventId(), $eventData);
+        $document = $this->getDecodedDocument($this->getEventId(), $eventData);
 
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -164,10 +165,10 @@ class LocationPreProcessingJsonImporterTest extends TestCase
     public function it_should_ignore_location_with_unknown_id()
     {
         $eventData = $this->getRequiredEventJsonData();
-        $document = $this->getJsonDocument($this->getEventId(), $eventData);
+        $document = $this->getDecodedDocument($this->getEventId(), $eventData);
 
         $this->expectNoPlaceFound();
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -178,10 +179,10 @@ class LocationPreProcessingJsonImporterTest extends TestCase
     public function it_should_ignore_location_with_invalid_stored_json_document()
     {
         $eventData = $this->getRequiredEventJsonData();
-        $document = $this->getJsonDocument($this->getEventId(), $eventData);
+        $document = $this->getDecodedDocument($this->getEventId(), $eventData);
 
         $this->expectPlaceDeleted();
-        $this->expectJsonDocument($document);
+        $this->expectImportDocument($document);
 
         $this->preProcessor->import($document);
     }
@@ -273,31 +274,15 @@ class LocationPreProcessingJsonImporterTest extends TestCase
             ->willThrowException(new DocumentGoneException());
     }
 
-    private function expectJsonDocument(JsonDocument $jsonDocument)
+    private function expectImportDocument(DecodedDocument $decodedDocument)
     {
         $this->importer->expects($this->once())
             ->method('import')
-            ->with(
-                $this->callback(
-                    function (JsonDocument $actual) use ($jsonDocument) {
-                        $this->assertEquals(
-                            $jsonDocument->getId(),
-                            $actual->getId()
-                        );
-
-                        $this->assertEquals(
-                            $jsonDocument->getBody(),
-                            $actual->getBody()
-                        );
-
-                        return true;
-                    }
-                )
-            );
+            ->with($decodedDocument);
     }
 
-    private function getJsonDocument($id, array $data)
+    private function getDecodedDocument($id, array $data)
     {
-        return new JsonDocument($id, json_encode($data));
+        return new DecodedDocument($id, $data);
     }
 }
