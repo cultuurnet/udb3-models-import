@@ -123,6 +123,9 @@ class EventJsonImporter implements JsonImporterInterface
         $calendar = Calendar::fromUdb3ModelCalendar($import->getCalendar());
 
         $publishDate = $import->getAvailableFrom();
+        if (!$publishDate) {
+            $publishDate = new \DateTimeImmutable();
+        }
 
         $commands = [];
         if (!$current) {
@@ -136,6 +139,15 @@ class EventJsonImporter implements JsonImporterInterface
                 $theme,
                 $publishDate
             );
+
+            // New events created via the import API should always be set to
+            // ready_for_validation.
+            // The publish date in EventCreated does not seem to trigger a
+            // wfStatus "ready_for_validation" on the json-ld so we manually
+            // publish the event after creating it.
+            // Existing events should always keep their original status, so
+            // only do this publish command for new events.
+            $commands[] = new Publish($id, $publishDate);
         } else {
             $commands[] = new UpdateTitle(
                 $id,
@@ -147,10 +159,6 @@ class EventJsonImporter implements JsonImporterInterface
             $commands[] = new UpdateLocation($id, new LocationId($placeId->toString()));
             $commands[] = new UpdateCalendar($id, $calendar);
             $commands[] = new UpdateTheme($id, $theme);
-
-            if (!is_null($publishDate)) {
-                $commands[] = new Publish($id, $publishDate);
-            }
         }
 
         /* @var \CultuurNet\UDB3\Model\ValueObject\Translation\Language $language */
