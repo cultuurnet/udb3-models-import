@@ -7,7 +7,6 @@ use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUIDParser;
 use CultuurNet\UDB3\Model\ValueObject\Web\Url;
-use CultuurNet\UDB3\ReadModel\JsonDocument;
 
 class LocationPreProcessingDocumentImporter implements DocumentImporterInterface
 {

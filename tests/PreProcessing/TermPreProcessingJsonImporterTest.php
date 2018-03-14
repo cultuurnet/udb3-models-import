@@ -3,11 +3,9 @@
 namespace CultuurNet\UDB3\Model\Import\PreProcessing;
 
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
-use CultuurNet\UDB3\Model\Import\Event\EventLegacyBridgeCategoryResolver;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
-use CultuurNet\UDB3\ReadModel\JsonDocument;
+use CultuurNet\UDB3\Model\Import\Event\EventLegacyBridgeCategoryResolver;
 use PHPUnit\Framework\TestCase;
-use Respect\Validation\Exceptions\ValidationException;
 
 class TermPreProcessingJsonImporterTest extends TestCase
 {

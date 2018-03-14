@@ -6,7 +6,6 @@ use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\Taxonomy\Category\CategoryResolverInterface;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\CategoryID;
-use CultuurNet\UDB3\ReadModel\JsonDocument;
 
 class TermPreProcessingDocumentImporter implements DocumentImporterInterface
 {

@@ -5,12 +5,10 @@ namespace CultuurNet\UDB3\Model\Import\PreProcessing;
 use CultuurNet\UDB3\Event\ReadModel\DocumentGoneException;
 use CultuurNet\UDB3\Event\ReadModel\DocumentRepositoryInterface;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
-use CultuurNet\UDB3\Model\Import\Event\EventLegacyBridgeCategoryResolver;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Place\PlaceIDParser;
 use CultuurNet\UDB3\ReadModel\JsonDocument;
 use PHPUnit\Framework\TestCase;
-use Respect\Validation\Exceptions\ValidationException;
 
 class LocationPreProcessingJsonImporterTest extends TestCase
 {
