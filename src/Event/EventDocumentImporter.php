@@ -3,8 +3,6 @@
 namespace CultuurNet\UDB3\Model\Import\Event;
 
 use Broadway\CommandHandling\CommandBusInterface;
-use CultuurNet\UDB3\Address\Address;
-use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
@@ -12,22 +10,15 @@ use CultuurNet\UDB3\Event\Commands\UpdateLocation;
 use CultuurNet\UDB3\Event\Commands\UpdateTheme;
 use CultuurNet\UDB3\Event\Commands\UpdateTitle;
 use CultuurNet\UDB3\Event\Commands\UpdateType;
-use CultuurNet\UDB3\Event\EventType;
 use CultuurNet\UDB3\Event\ReadModel\DocumentGoneException;
 use CultuurNet\UDB3\Event\ReadModel\DocumentRepositoryInterface;
 use CultuurNet\UDB3\Language;
-use CultuurNet\UDB3\Location\Location;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
-use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\Category;
-use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\CategoryDomain;
-use CultuurNet\UDB3\Theme;
-use CultuurNet\UDB3\Title;
 use Respect\Validation\Exceptions\ValidationException;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
-use ValueObjects\StringLiteral\StringLiteral;
 
 class EventDocumentImporter implements DocumentImporterInterface
 {
@@ -84,51 +75,15 @@ class EventDocumentImporter implements DocumentImporterInterface
         $importData = $decodedDocument->getBody();
         $import = $this->eventDenormalizer->denormalize($importData, Event::class);
 
-        $mainLanguage = Language::fromUdb3ModelLanguage(
-            $import->getMainLanguage()
-        );
+        $adapter = new Udb3ModelToLegacyEventAdapter($import);
 
-        $title = Title::fromUdb3ModelTitle(
-            $import->getTitle()->getTranslation(
-                $import->getMainLanguage()
-            )
-        );
-
-        $type = $import->getTerms()
-            ->filter(
-                function (Category $term) {
-                    return $term->getDomain()->sameAs(new CategoryDomain('eventtype'));
-                }
-            )
-            ->getFirst();
-        $type = EventType::fromUdb3Model($type);
-
-        $theme = $import->getTerms()
-            ->filter(
-                function (Category $term) {
-                    return $term->getDomain()->sameAs(new CategoryDomain('theme'));
-                }
-            )
-            ->getFirst();
-        $theme = $theme ? Theme::fromUdb3Model($theme) : null;
-
-        $place = $import->getPlaceReference()->getEmbeddedPlace();
-        $placeId = $place->getId();
-        $placeName = $place->getTitle()->getTranslation($place->getTitle()->getOriginalLanguage());
-        $placeAddress = $place->getAddress()->getTranslation($place->getAddress()->getOriginalLanguage());
-
-        $location = new Location(
-            $import->getPlaceReference()->getPlaceId()->toString(),
-            new StringLiteral($placeName->toString()),
-            Address::fromUdb3Model($placeAddress)
-        );
-
-        $calendar = Calendar::fromUdb3ModelCalendar($import->getCalendar());
-
-        $publishDate = $import->getAvailableFrom();
-        if (!$publishDate) {
-            $publishDate = new \DateTimeImmutable();
-        }
+        $mainLanguage = $adapter->getMainLanguage();
+        $title = $adapter->getTitle();
+        $type = $adapter->getType();
+        $theme = $adapter->getTheme();
+        $location = $adapter->getLocation();
+        $calendar = $adapter->getCalendar();
+        $publishDate = $adapter->getAvailableFrom(new \DateTimeImmutable());
 
         $commands = [];
         if (!$current) {
@@ -159,22 +114,14 @@ class EventDocumentImporter implements DocumentImporterInterface
             );
 
             $commands[] = new UpdateType($id, $type);
-            $commands[] = new UpdateLocation($id, new LocationId($placeId->toString()));
+            $commands[] = new UpdateLocation($id, new LocationId($location->getCdbid()));
             $commands[] = new UpdateCalendar($id, $calendar);
             $commands[] = new UpdateTheme($id, $theme);
         }
 
-        /* @var \CultuurNet\UDB3\Model\ValueObject\Translation\Language $language */
-        foreach ($import->getTitle()->getLanguages() as $language) {
-            if ($language->sameAs($import->getMainLanguage())) {
-                continue;
-            }
-
-            $commands[] = new UpdateTitle(
-                $id,
-                Language::fromUdb3ModelLanguage($language),
-                Title::fromUdb3ModelTitle($import->getTitle()->getTranslation($language))
-            );
+        foreach ($adapter->getTitleTranslations() as $language => $title) {
+            $language = new Language($language);
+            $commands[] = new UpdateTitle($id, $language, $title);
         }
 
         foreach ($commands as $command) {
