@@ -58,7 +58,7 @@ class DecodedDocument
      */
     public function toJson()
     {
-        return json_encode($this->body);
+        return json_encode($this->body, JSON_UNESCAPED_SLASHES);
     }
 
     /**
@@ -76,7 +76,7 @@ class DecodedDocument
      */
     public static function fromJson($id, $json)
     {
-        $body = json_decode($json);
+        $body = json_decode($json, true);
 
         if (is_null($body)) {
             throw new \InvalidArgumentException('The given JSON is not valid and can not be decoded.');
