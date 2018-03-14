@@ -27,7 +27,6 @@ use CultuurNet\UDB3\Theme;
 use CultuurNet\UDB3\Title;
 use Respect\Validation\Exceptions\ValidationException;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
-use Symfony\Component\Serializer\Serializer;
 use ValueObjects\StringLiteral\StringLiteral;
 
 class EventDocumentImporter implements DocumentImporterInterface
