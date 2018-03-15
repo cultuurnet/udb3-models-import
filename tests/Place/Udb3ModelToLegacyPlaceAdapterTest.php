@@ -20,7 +20,6 @@ use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\CategoryLabel;
 use CultuurNet\UDB3\Model\ValueObject\Text\Title;
 use CultuurNet\UDB3\Model\ValueObject\Text\TranslatedTitle;
 use CultuurNet\UDB3\Model\ValueObject\Translation\Language;
-use League\Flysystem\Adapter\Local;
 use PHPUnit\Framework\TestCase;
 use ValueObjects\Geography\Country;
 
