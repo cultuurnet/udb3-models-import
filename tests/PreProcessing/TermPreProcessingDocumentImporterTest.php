@@ -7,7 +7,7 @@ use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\Event\EventLegacyBridgeCategoryResolver;
 use PHPUnit\Framework\TestCase;
 
-class TermPreProcessingJsonImporterTest extends TestCase
+class TermPreProcessingDocumentImporterTest extends TestCase
 {
     /**
      * @var DocumentImporterInterface|\PHPUnit_Framework_MockObject_MockObject

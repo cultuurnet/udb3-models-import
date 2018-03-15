@@ -10,7 +10,7 @@ use CultuurNet\UDB3\Model\Place\PlaceIDParser;
 use CultuurNet\UDB3\ReadModel\JsonDocument;
 use PHPUnit\Framework\TestCase;
 
-class LocationPreProcessingJsonImporterTest extends TestCase
+class LocationPreProcessingDocumentImporterTest extends TestCase
 {
     /**
      * @var DocumentImporterInterface|\PHPUnit_Framework_MockObject_MockObject
