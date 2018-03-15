@@ -17,7 +17,6 @@ use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
-use Respect\Validation\Exceptions\ValidationException;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
 class EventDocumentImporter implements DocumentImporterInterface
