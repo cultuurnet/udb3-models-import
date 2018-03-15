@@ -66,7 +66,8 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
         $type = $this->offer->getTerms()
             ->filter(
                 function (Category $term) {
-                    return $term->getDomain()->sameAs(new CategoryDomain('eventtype'));
+                    $domain = $term->getDomain();
+                    return $domain && $domain->sameAs(new CategoryDomain('eventtype'));
                 }
             )
             ->getFirst();
@@ -82,7 +83,8 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
         $theme = $this->offer->getTerms()
             ->filter(
                 function (Category $term) {
-                    return $term->getDomain()->sameAs(new CategoryDomain('theme'));
+                    $domain = $term->getDomain();
+                    return $domain && $domain->sameAs(new CategoryDomain('theme'));
                 }
             )
             ->getFirst();

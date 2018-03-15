@@ -3,6 +3,8 @@
 namespace CultuurNet\UDB3\Model\Import\Event;
 
 use Broadway\CommandHandling\CommandBusInterface;
+use Broadway\Repository\AggregateNotFoundException;
+use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
@@ -10,8 +12,6 @@ use CultuurNet\UDB3\Event\Commands\UpdateLocation;
 use CultuurNet\UDB3\Event\Commands\UpdateTheme;
 use CultuurNet\UDB3\Event\Commands\UpdateTitle;
 use CultuurNet\UDB3\Event\Commands\UpdateType;
-use CultuurNet\UDB3\Event\ReadModel\DocumentGoneException;
-use CultuurNet\UDB3\Event\ReadModel\DocumentRepositoryInterface;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
@@ -23,9 +23,9 @@ use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 class EventDocumentImporter implements DocumentImporterInterface
 {
     /**
-     * @var DocumentRepositoryInterface
+     * @var RepositoryInterface
      */
-    private $eventDocumentRepository;
+    private $aggregateRepository;
 
     /**
      * @var DenormalizerInterface
@@ -38,11 +38,11 @@ class EventDocumentImporter implements DocumentImporterInterface
     private $commandBus;
 
     public function __construct(
-        DocumentRepositoryInterface $eventDocumentRepository,
+        RepositoryInterface $aggregateRepository,
         DenormalizerInterface $eventDenormalizer,
         CommandBusInterface $commandBus
     ) {
-        $this->eventDocumentRepository = $eventDocumentRepository;
+        $this->aggregateRepository = $aggregateRepository;
         $this->eventDenormalizer = $eventDenormalizer;
         $this->commandBus = $commandBus;
     }
@@ -54,21 +54,10 @@ class EventDocumentImporter implements DocumentImporterInterface
     {
         $id = $decodedDocument->getId();
 
-        // Try to get the current document to check that it hasn't been deleted in the past,
-        // before we validate and denormalize the import data.
         try {
-            $current = null;
-            $currentDocument = $this->eventDocumentRepository->get($id);
-
-            if ($currentDocument) {
-                $currentDocument = DecodedDocument::fromJsonDocument($currentDocument);
-                $currentData = $currentDocument->getBody();
-                $current = $this->eventDenormalizer->denormalize($currentData, Event::class);
-            }
-        } catch (DocumentGoneException $e) {
-            throw new ValidationException('The Event with the given id has been deleted and cannot be re-created.');
-        } catch (\Exception $e) {
-            throw new \LogicException('Could not deserialize internal event read model!', 0, $e);
+            $exists = !is_null($this->aggregateRepository->load($id));
+        } catch (AggregateNotFoundException $e) {
+            $exists = false;
         }
 
         /* @var Event $import */
@@ -86,7 +75,7 @@ class EventDocumentImporter implements DocumentImporterInterface
         $publishDate = $adapter->getAvailableFrom(new \DateTimeImmutable());
 
         $commands = [];
-        if (!$current) {
+        if (!$exists) {
             $commands[] = new CreateEvent(
                 $id,
                 $mainLanguage,
