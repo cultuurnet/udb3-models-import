@@ -1,25 +1,25 @@
 <?php
 
-namespace CultuurNet\UDB3\Model\Import\Event;
+namespace CultuurNet\UDB3\Model\Import\Place;
 
 use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
-use CultuurNet\UDB3\Event\Commands\CreateEvent;
-use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
-use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
-use CultuurNet\UDB3\Event\Commands\UpdateLocation;
-use CultuurNet\UDB3\Event\Commands\UpdateTheme;
-use CultuurNet\UDB3\Event\Commands\UpdateTitle;
-use CultuurNet\UDB3\Event\Commands\UpdateType;
+use CultuurNet\UDB3\Place\Commands\CreatePlace;
+use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
+use CultuurNet\UDB3\Place\Commands\UpdateAddress;
+use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
+use CultuurNet\UDB3\Place\Commands\UpdateTheme;
+use CultuurNet\UDB3\Place\Commands\UpdateTitle;
+use CultuurNet\UDB3\Place\Commands\UpdateType;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\LocationId;
-use CultuurNet\UDB3\Model\Event\Event;
+use CultuurNet\UDB3\Model\Place\Place;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
-class EventDocumentImporter implements DocumentImporterInterface
+class PlaceDocumentImporter implements DocumentImporterInterface
 {
     /**
      * @var RepositoryInterface
@@ -29,7 +29,7 @@ class EventDocumentImporter implements DocumentImporterInterface
     /**
      * @var DenormalizerInterface
      */
-    private $eventDenormalizer;
+    private $placeDenormalizer;
 
     /**
      * @var CommandBusInterface
@@ -38,11 +38,11 @@ class EventDocumentImporter implements DocumentImporterInterface
 
     public function __construct(
         RepositoryInterface $aggregateRepository,
-        DenormalizerInterface $eventDenormalizer,
+        DenormalizerInterface $placeDenormalizer,
         CommandBusInterface $commandBus
     ) {
         $this->aggregateRepository = $aggregateRepository;
-        $this->eventDenormalizer = $eventDenormalizer;
+        $this->placeDenormalizer = $placeDenormalizer;
         $this->commandBus = $commandBus;
     }
 
@@ -59,40 +59,40 @@ class EventDocumentImporter implements DocumentImporterInterface
             $exists = false;
         }
 
-        /* @var Event $import */
+        /* @var Place $import */
         $importData = $decodedDocument->getBody();
-        $import = $this->eventDenormalizer->denormalize($importData, Event::class);
+        $import = $this->placeDenormalizer->denormalize($importData, Place::class);
 
-        $adapter = new Udb3ModelToLegacyEventAdapter($import);
+        $adapter = new Udb3ModelToLegacyPlaceAdapter($import);
 
         $mainLanguage = $adapter->getMainLanguage();
         $title = $adapter->getTitle();
         $type = $adapter->getType();
         $theme = $adapter->getTheme();
-        $location = $adapter->getLocation();
+        $address = $adapter->getAddress();
         $calendar = $adapter->getCalendar();
         $publishDate = $adapter->getAvailableFrom(new \DateTimeImmutable());
 
         $commands = [];
         if (!$exists) {
-            $commands[] = new CreateEvent(
+            $commands[] = new CreatePlace(
                 $id,
                 $mainLanguage,
                 $title,
                 $type,
-                $location,
+                $address,
                 $calendar,
                 $theme,
                 $publishDate
             );
 
-            // New events created via the import API should always be set to
+            // New places created via the import API should always be set to
             // ready_for_validation.
-            // The publish date in EventCreated does not seem to trigger a
+            // The publish date in PlaceCreated does not seem to trigger a
             // wfStatus "ready_for_validation" on the json-ld so we manually
-            // publish the event after creating it.
-            // Existing events should always keep their original status, so
-            // only do this publish command for new events.
+            // publish the place after creating it.
+            // Existing places should always keep their original status, so
+            // only do this publish command for new places.
             $commands[] = new Publish($id, $publishDate);
         } else {
             $commands[] = new UpdateTitle(
@@ -102,7 +102,7 @@ class EventDocumentImporter implements DocumentImporterInterface
             );
 
             $commands[] = new UpdateType($id, $type);
-            $commands[] = new UpdateLocation($id, new LocationId($location->getCdbid()));
+            $commands[] = new UpdateAddress($id, $address, $mainLanguage);
             $commands[] = new UpdateCalendar($id, $calendar);
 
             if ($theme) {
@@ -113,6 +113,11 @@ class EventDocumentImporter implements DocumentImporterInterface
         foreach ($adapter->getTitleTranslations() as $language => $title) {
             $language = new Language($language);
             $commands[] = new UpdateTitle($id, $language, $title);
+        }
+
+        foreach ($adapter->getAddressTranslations() as $language => $address) {
+            $language = new Language($language);
+            $commands[] = new UpdateAddress($id, $address, $language);
         }
 
         foreach ($commands as $command) {
