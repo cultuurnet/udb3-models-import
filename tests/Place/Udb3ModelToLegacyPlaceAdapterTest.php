@@ -64,27 +64,27 @@ class Udb3ModelToLegacyPlaceAdapterTest extends TestCase
             \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T10:00:00+01:00')
         );
 
-        $this->place = $this->place->withAddress(
-            ($this->place->getAddress())
-                ->withTranslation(
-                    new Language('fr'),
-                    new Address(
-                        new Street('Quai du Hainaut 41-43'),
-                        new PostalCode('1080'),
-                        new Locality('Bruxelles'),
-                        new CountryCode('BE')
-                    )
+        $translatedAddress = $this->place->getAddress()
+            ->withTranslation(
+                new Language('fr'),
+                new Address(
+                    new Street('Quai du Hainaut 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Bruxelles'),
+                    new CountryCode('BE')
                 )
-                ->withTranslation(
-                    new Language('en'),
-                    new Address(
-                        new Street('Henegouwenkaai 41-43'),
-                        new PostalCode('1080'),
-                        new Locality('Brussels'),
-                        new CountryCode('BE')
-                    )
+            )
+            ->withTranslation(
+                new Language('en'),
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussels'),
+                    new CountryCode('BE')
                 )
-        );
+            );
+
+        $this->place = $this->place->withAddress($translatedAddress);
 
         $this->adapter = new Udb3ModelToLegacyPlaceAdapter($this->place);
     }
