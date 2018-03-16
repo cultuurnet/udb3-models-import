@@ -3,7 +3,6 @@
 namespace CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Category;
 
 use CultuurNet\UDB3\Model\Import\Event\EventLegacyBridgeCategoryResolver;
-use CultuurNet\UDB3\Model\Import\Taxonomy\Category\CategoriesExistValidator;
 use PHPUnit\Framework\TestCase;
 use Respect\Validation\Exceptions\GroupedValidationException;
 

@@ -1,8 +1,7 @@
 <?php
 
-namespace CultuurNet\UDB3\Model\Import\Taxonomy\Category;
+namespace CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Category;
 
-use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Category\CategoryCountValidator;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\CategoryDomain;
 
 class EventTypeCountValidator extends CategoryCountValidator

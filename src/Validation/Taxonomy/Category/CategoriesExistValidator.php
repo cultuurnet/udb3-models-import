@@ -1,8 +1,8 @@
 <?php
 
-namespace CultuurNet\UDB3\Model\Import\Taxonomy\Category;
+namespace CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Category;
 
-use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Category\CategoryExistsValidator;
+use CultuurNet\UDB3\Model\Import\Taxonomy\Category\CategoryResolverInterface;
 use Respect\Validation\Rules\AlwaysValid;
 use Respect\Validation\Rules\ArrayType;
 use Respect\Validation\Rules\Each;

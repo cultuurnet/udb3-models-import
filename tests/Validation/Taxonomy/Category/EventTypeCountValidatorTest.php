@@ -2,7 +2,6 @@
 
 namespace CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Category;
 
-use CultuurNet\UDB3\Model\Import\Taxonomy\Category\EventTypeCountValidator;
 use PHPUnit\Framework\TestCase;
 use Respect\Validation\Exceptions\GroupedValidationException;
 
