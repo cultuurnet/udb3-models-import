@@ -3,6 +3,7 @@
 namespace CultuurNet\UDB3\Model\Import\Event;
 
 use CultuurNet\UDB3\Address\Address;
+use CultuurNet\UDB3\Event\ValueObjects\AudienceType;
 use CultuurNet\UDB3\Location\Location;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\Offer\Udb3ModelToLegacyOfferAdapter;
@@ -46,6 +47,20 @@ class Udb3ModelToLegacyEventAdapter extends Udb3ModelToLegacyOfferAdapter implem
             $this->getPlaceName(),
             $this->getPlaceAddress()
         );
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getAudienceType()
+    {
+        $audienceType = $this->event->getAudienceType();
+
+        if ($audienceType) {
+            return AudienceType::fromNative($audienceType->toString());
+        } else {
+            return null;
+        }
     }
 
     /**

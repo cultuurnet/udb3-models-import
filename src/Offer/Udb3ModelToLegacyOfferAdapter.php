@@ -2,12 +2,17 @@
 
 namespace CultuurNet\UDB3\Model\Import\Offer;
 
+use CultuurNet\UDB3\BookingInfo;
 use CultuurNet\UDB3\Calendar;
+use CultuurNet\UDB3\ContactPoint;
+use CultuurNet\UDB3\Description;
 use CultuurNet\UDB3\Event\EventType;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Offer\Offer;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\Category;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Category\CategoryDomain;
+use CultuurNet\UDB3\Offer\AgeRange;
+use CultuurNet\UDB3\PriceInfo\PriceInfo;
 use CultuurNet\UDB3\Theme;
 use CultuurNet\UDB3\Title;
 
@@ -61,6 +66,23 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
     /**
      * @inheritdoc
      */
+    public function getDescription()
+    {
+        $translatedDescription = $this->offer->getDescription();
+
+        if ($translatedDescription) {
+            $description = $translatedDescription->getTranslation($translatedDescription->getOriginalLanguage());
+            return Description::fromUdb3ModelDescription($description);
+        } else {
+            return null;
+        }
+
+
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function getType()
     {
         $type = $this->offer->getTerms()
@@ -101,8 +123,77 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
     }
 
     /**
-     * @param \DateTimeImmutable|null $default
-     * @return \DateTimeImmutable|null
+     * @inheritdoc
+     */
+    public function getOrganizerId()
+    {
+        $reference = $this->offer->getOrganizerReference();
+
+        if ($reference) {
+            return $reference->getOrganizerId()->toString();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getAgeRange()
+    {
+        $ageRange = $this->offer->getAgeRange();
+
+        if ($ageRange) {
+            return AgeRange::fromUbd3ModelAgeRange($ageRange);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getPriceInfo()
+    {
+        $priceInfo = $this->offer->getPriceInfo();
+
+        if ($priceInfo) {
+            return PriceInfo::fromUdb3ModelPriceInfo($priceInfo);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getBookingInfo()
+    {
+        $bookingInfo = $this->offer->getBookingInfo();
+
+        if ($bookingInfo) {
+            return BookingInfo::fromUdb3ModelBookingInfo($bookingInfo);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getContactPoint()
+    {
+        $contactPoint = $this->offer->getContactPoint();
+
+        if ($contactPoint) {
+            return ContactPoint::fromUdb3ModelContactPoint($contactPoint);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @inheritdoc
      */
     public function getAvailableFrom(\DateTimeImmutable $default = null)
     {
@@ -114,8 +205,7 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
     }
 
     /**
-     * @return Title[]
-     *   Language code as key, and Title as value.
+     * @inheritdoc
      */
     public function getTitleTranslations()
     {
@@ -130,5 +220,28 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
         }
 
         return $titles;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getDescriptionTranslations()
+    {
+        $descriptions = [];
+
+        /* @var \CultuurNet\UDB3\Model\ValueObject\Translation\Language $language */
+        $translatedDescription = $this->offer->getDescription();
+
+        if (!$translatedDescription) {
+            return null;
+        }
+
+        foreach ($translatedDescription->getLanguagesWithoutOriginal() as $language) {
+            $descriptions[$language->toString()] = Description::fromUdb3ModelDescription(
+                $translatedDescription->getTranslation($language)
+            );
+        }
+
+        return $descriptions;
     }
 }
