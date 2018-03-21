@@ -76,8 +76,6 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
         } else {
             return null;
         }
-
-
     }
 
     /**
