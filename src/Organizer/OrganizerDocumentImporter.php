@@ -5,6 +5,7 @@ namespace CultuurNet\UDB3\Model\Import\Organizer;
 use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\Event\Commands\ImportLabels;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
@@ -85,6 +86,10 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
         foreach ($adapter->getTitleTranslations() as $language => $title) {
             $language = new Language($language);
             $commands[] = new UpdateTitle($id, $title, $language);
+        }
+
+        if ($import->getLabels()->count()) {
+            $commands[] = new ImportLabels($id, $import->getLabels());
         }
 
         foreach ($commands as $command) {
