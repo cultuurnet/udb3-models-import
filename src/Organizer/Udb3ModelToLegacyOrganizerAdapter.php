@@ -2,8 +2,11 @@
 
 namespace CultuurNet\UDB3\Model\Import\Organizer;
 
+use CultuurNet\UDB3\Label;
+use CultuurNet\UDB3\LabelCollection;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Organizer\Organizer;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label as Udb3ModelLabel;
 use CultuurNet\UDB3\Title;
 use ValueObjects\Web\Url;
 
@@ -83,5 +86,23 @@ class Udb3ModelToLegacyOrganizerAdapter implements LegacyOrganizer
         }
 
         return $titles;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getLabels()
+    {
+        return new LabelCollection(
+            array_map(
+                function (Udb3ModelLabel $label) {
+                    return new Label(
+                        $label->getName()->toString(),
+                        $label->isVisible()
+                    );
+                },
+                $this->organizer->getLabels()->toArray()
+            )
+        );
     }
 }

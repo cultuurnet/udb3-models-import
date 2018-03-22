@@ -2,9 +2,13 @@
 
 namespace CultuurNet\UDB3\Model\Import\Offer;
 
+use CultuurNet\UDB3\LabelCollection;
 use CultuurNet\UDB3\Model\Import\Organizer\Udb3ModelToLegacyOrganizerAdapter;
 use CultuurNet\UDB3\Model\Organizer\ImmutableOrganizer;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUID;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
 use CultuurNet\UDB3\Model\ValueObject\Text\Title;
 use CultuurNet\UDB3\Model\ValueObject\Text\TranslatedTitle;
 use CultuurNet\UDB3\Model\ValueObject\Translation\Language;
@@ -32,6 +36,13 @@ class Udb3ModelToLegacyOrganizerAdapterTest extends TestCase
                 ->withTranslation(new Language('fr'), new Title('Titre example'))
                 ->withTranslation(new Language('en'), new Title('Example title')),
             new Url('https://www.publiq.be')
+        );
+
+        $this->organizer = $this->organizer->withLabels(
+            new Labels(
+                new Label(new LabelName('foo'), true),
+                new Label(new LabelName('bar'), false)
+            )
         );
 
         $this->adapter = new Udb3ModelToLegacyOrganizerAdapter($this->organizer);
@@ -105,6 +116,22 @@ class Udb3ModelToLegacyOrganizerAdapterTest extends TestCase
             'en' => new \CultuurNet\UDB3\Title('Example title'),
         ];
         $actual = $this->adapter->getTitleTranslations();
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_return_a_label_collection()
+    {
+        $expected = new LabelCollection(
+            [
+                new \CultuurNet\UDB3\Label('foo', true),
+                new \CultuurNet\UDB3\Label('bar', false),
+            ]
+        );
+
+        $actual = $this->adapter->getLabels();
         $this->assertEquals($expected, $actual);
     }
 }
