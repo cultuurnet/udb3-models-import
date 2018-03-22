@@ -11,6 +11,10 @@ use CultuurNet\UDB3\Address\PostalCode;
 use CultuurNet\UDB3\Address\Street;
 use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\CalendarType;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
+use CultuurNet\UDB3\Place\Commands\ImportLabels;
 use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
 use CultuurNet\UDB3\Place\Commands\UpdateTitle;
@@ -158,42 +162,37 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = [
-            new UpdateTitle($id, new Language('nl'), new Title('Voorbeeld naam')),
-            new UpdateType($id, new EventType('0.14.0.0.0', 'Monument')),
-            new UpdateAddress(
-                $id,
-                new Address(
-                    new Street('Henegouwenkaai 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Brussel'),
-                    new Country(CountryCode::fromNative('BE'))
-                ),
-                new Language('nl')
-            ),
-            new UpdateCalendar($id, new Calendar(CalendarType::PERMANENT())),
-            new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
-            new UpdateTitle($id, new Language('en'), new Title('Example name')),
-            new UpdateAddress(
-                $id,
-                new Address(
-                    new Street('Quai du Hainaut 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Bruxelles'),
-                    new Country(CountryCode::fromNative('BE'))
-                ),
-                new Language('fr')
-            ),
-            new UpdateAddress(
-                $id,
-                new Address(
-                    new Street('Henegouwenkaai 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Brussels'),
-                    new Country(CountryCode::fromNative('BE'))
-                ),
-                new Language('en')
-            ),
+        $expectedCommands = $this->getExpectedCommands();
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertEquals($expectedCommands, $recordedCommands);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_an_existing_place_with_labels()
+    {
+        $document = $this->getPlaceDocumentWithLabels();
+        $id = $document->getId();
+
+        $this->expectPlaceExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $expectedCommands = $this->getExpectedCommands() + [
+            new ImportLabels(
+                $this->getPlaceId(),
+                new Labels(
+                    new Label(new LabelName('foo'), true),
+                    new Label(new LabelName('bar'), true),
+                    new Label(new LabelName('lorem'), false),
+                    new Label(new LabelName('ipsum'), false)
+                )
+            )
         ];
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
@@ -255,11 +254,86 @@ class PlaceDocumentImporterTest extends TestCase
     }
 
     /**
+     * @return array
+     */
+    private function getPlaceDataWithLabels()
+    {
+        return $this->getPlaceData() + [
+                [
+                    'labels' => [
+                        'foo',
+                        'bar',
+                    ]
+                ],
+                [
+                    'hiddenLabels' => [
+                        'lorem',
+                        'ipsum',
+                    ]
+                ]
+            ];
+    }
+
+    /**
      * @return DecodedDocument
      */
     private function getPlaceDocument()
     {
         return new DecodedDocument($this->getPlaceId(), $this->getPlaceData());
+    }
+
+    /**
+     * @return DecodedDocument
+     */
+    private function getPlaceDocumentWithLabels()
+    {
+        return new DecodedDocument($this->getPlaceId(), $this->getPlaceDataWithLabels());
+    }
+
+    /**
+     * @return array
+     */
+    private function getExpectedCommands()
+    {
+        $id = $this->getPlaceId();
+
+        return [
+            new UpdateTitle($id, new Language('nl'), new Title('Voorbeeld naam')),
+            new UpdateType($id, new EventType('0.14.0.0.0', 'Monument')),
+            new UpdateAddress(
+                $id,
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussel'),
+                    new Country(CountryCode::fromNative('BE'))
+                ),
+                new Language('nl')
+            ),
+            new UpdateCalendar($id, new Calendar(CalendarType::PERMANENT())),
+            new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
+            new UpdateTitle($id, new Language('en'), new Title('Example name')),
+            new UpdateAddress(
+                $id,
+                new Address(
+                    new Street('Quai du Hainaut 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Bruxelles'),
+                    new Country(CountryCode::fromNative('BE'))
+                ),
+                new Language('fr')
+            ),
+            new UpdateAddress(
+                $id,
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussels'),
+                    new Country(CountryCode::fromNative('BE'))
+                ),
+                new Language('en')
+            ),
+        ];
     }
 
     /**

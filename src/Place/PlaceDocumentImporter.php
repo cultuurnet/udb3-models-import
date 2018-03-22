@@ -6,6 +6,7 @@ use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\Place\Commands\CreatePlace;
+use CultuurNet\UDB3\Place\Commands\ImportLabels;
 use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateAddress;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
@@ -117,6 +118,10 @@ class PlaceDocumentImporter implements DocumentImporterInterface
         foreach ($adapter->getAddressTranslations() as $language => $address) {
             $language = new Language($language);
             $commands[] = new UpdateAddress($id, $address, $language);
+        }
+
+        if ($import->getLabels()->count() > 0) {
+            $commands[] = new ImportLabels($id, $import->getLabels());
         }
 
         foreach ($commands as $command) {
