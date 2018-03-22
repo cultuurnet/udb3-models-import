@@ -3,6 +3,7 @@
 namespace CultuurNet\UDB3\Model\Import\Organizer;
 
 use CultuurNet\UDB3\Address\Address;
+use CultuurNet\UDB3\ContactPoint;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Organizer\Organizer;
 use CultuurNet\UDB3\Title;
@@ -87,7 +88,8 @@ class Udb3ModelToLegacyOrganizerAdapter implements LegacyOrganizer
      */
     public function getContactPoint()
     {
-        // TODO: Implement getContactPoint() method.
+        $contactPoint = $this->organizer->getContactPoint();
+        return ContactPoint::fromUdb3ModelContactPoint($contactPoint);
     }
 
     /**
@@ -121,7 +123,7 @@ class Udb3ModelToLegacyOrganizerAdapter implements LegacyOrganizer
         $translatedAddress = $this->organizer->getAddress();
 
         if (!$translatedAddress) {
-            return null;
+            return [];
         }
 
         foreach ($translatedAddress->getLanguagesWithoutOriginal() as $language) {

@@ -168,12 +168,7 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
     public function getBookingInfo()
     {
         $bookingInfo = $this->offer->getBookingInfo();
-
-        if ($bookingInfo) {
-            return BookingInfo::fromUdb3ModelBookingInfo($bookingInfo);
-        } else {
-            return null;
-        }
+        return BookingInfo::fromUdb3ModelBookingInfo($bookingInfo);
     }
 
     /**
@@ -182,12 +177,7 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
     public function getContactPoint()
     {
         $contactPoint = $this->offer->getContactPoint();
-
-        if ($contactPoint) {
-            return ContactPoint::fromUdb3ModelContactPoint($contactPoint);
-        } else {
-            return null;
-        }
+        return ContactPoint::fromUdb3ModelContactPoint($contactPoint);
     }
 
     /**
@@ -231,7 +221,7 @@ class Udb3ModelToLegacyOfferAdapter implements LegacyOffer
         $translatedDescription = $this->offer->getDescription();
 
         if (!$translatedDescription) {
-            return null;
+            return [];
         }
 
         foreach ($translatedDescription->getLanguagesWithoutOriginal() as $language) {

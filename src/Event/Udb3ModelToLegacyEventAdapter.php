@@ -55,12 +55,7 @@ class Udb3ModelToLegacyEventAdapter extends Udb3ModelToLegacyOfferAdapter implem
     public function getAudienceType()
     {
         $audienceType = $this->event->getAudienceType();
-
-        if ($audienceType) {
-            return AudienceType::fromNative($audienceType->toString());
-        } else {
-            return null;
-        }
+        return AudienceType::fromNative($audienceType->toString());
     }
 
     /**

@@ -14,7 +14,7 @@ interface LegacyEvent extends LegacyOffer
     public function getLocation();
 
     /**
-     * @return AudienceType|null
+     * @return AudienceType
      */
     public function getAudienceType();
 }
