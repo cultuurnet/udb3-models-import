@@ -107,12 +107,7 @@ class OrganizerDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = [
-            new UpdateTitle($id, new Title('Voorbeeld naam'), new Language('nl')),
-            new UpdateWebsite($id, Url::fromNative('https://www.publiq.be')),
-            new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
-            new UpdateTitle($id, new Title('Example name'), new Language('en')),
-        ];
+        $expectedCommands = $this->getExpectedCommands();
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
