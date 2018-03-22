@@ -12,6 +12,7 @@ use CultuurNet\UDB3\Address\Street;
 use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\CalendarType;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
+use CultuurNet\UDB3\Event\Commands\ImportLabels;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
 use CultuurNet\UDB3\Event\Commands\UpdateLocation;
@@ -30,6 +31,9 @@ use CultuurNet\UDB3\Model\Import\PreProcessing\LocationPreProcessingDocumentImpo
 use CultuurNet\UDB3\Model\Import\PreProcessing\TermPreProcessingDocumentImporter;
 use CultuurNet\UDB3\Model\Place\PlaceIDParser;
 use CultuurNet\UDB3\Model\Serializer\Event\EventDenormalizer;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
 use CultuurNet\UDB3\Theme;
 use CultuurNet\UDB3\Timestamp;
 use CultuurNet\UDB3\Title;
@@ -183,29 +187,38 @@ class EventDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = [
-            new UpdateTitle($id, new Language('nl'), new Title('Voorbeeld naam')),
-            new UpdateType($id, new EventType('0.7.0.0.0', 'Begeleide rondleiding')),
-            new UpdateLocation($id, new LocationId('f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0')),
-            new UpdateCalendar(
-                $id,
-                new Calendar(
-                    CalendarType::SINGLE(),
-                    \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
-                    \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00'),
-                    [
-                        new Timestamp(
-                            \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
-                            \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00')
-                        ),
-                    ],
-                    []
+        $expectedCommands = $this->getExpectedCommands();
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertEquals($expectedCommands, $recordedCommands);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_an_existing_event_with_labels()
+    {
+        $document = $this->getEventDocumentWithLabels();
+        $id = $document->getId();
+
+        $this->expectEventIdExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $expectedCommands = $this->getExpectedCommands() + [
+                new ImportLabels(
+                    $this->getEventId(),
+                    new Labels(
+                        new Label(new LabelName('foo'), true),
+                        new Label(new LabelName('bar'), true),
+                        new Label(new LabelName('lorem'), false),
+                        new Label(new LabelName('ipsum'), false)
+                    )
                 )
-            ),
-            new UpdateTheme($id, new Theme('1.17.0.0.0', 'Antiek en brocante')),
-            new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
-            new UpdateTitle($id, new Language('en'), new Title('Example name')),
-        ];
+            ];
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
@@ -249,11 +262,69 @@ class EventDocumentImporterTest extends TestCase
     }
 
     /**
+     * @return array
+     */
+    private function getEventDataWithLabels()
+    {
+        return $this->getEventData() + [
+            [
+                'labels' => [
+                    'foo',
+                    'bar',
+                ]
+            ],
+            [
+                'hiddenLabels' => [
+                    'lorem',
+                    'ipsum',
+                ]
+            ]
+        ];
+    }
+
+    /**
      * @return DecodedDocument
      */
     private function getEventDocument()
     {
         return new DecodedDocument($this->getEventId(), $this->getEventData());
+    }
+
+    /**
+     * @return DecodedDocument
+     */
+    private function getEventDocumentWithLabels()
+    {
+        return new DecodedDocument($this->getEventId(), $this->getEventDataWithLabels());
+    }
+
+    private function getExpectedCommands()
+    {
+        $id = $this->getEventId();
+
+        return [
+            new UpdateTitle($id, new Language('nl'), new Title('Voorbeeld naam')),
+            new UpdateType($id, new EventType('0.7.0.0.0', 'Begeleide rondleiding')),
+            new UpdateLocation($id, new LocationId('f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0')),
+            new UpdateCalendar(
+                $id,
+                new Calendar(
+                    CalendarType::SINGLE(),
+                    \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
+                    \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00'),
+                    [
+                        new Timestamp(
+                            \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
+                            \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00')
+                        ),
+                    ],
+                    []
+                )
+            ),
+            new UpdateTheme($id, new Theme('1.17.0.0.0', 'Antiek en brocante')),
+            new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
+            new UpdateTitle($id, new Language('en'), new Title('Example name')),
+        ];
     }
 
     /**

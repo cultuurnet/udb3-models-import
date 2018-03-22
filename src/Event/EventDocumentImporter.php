@@ -6,6 +6,7 @@ use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
+use CultuurNet\UDB3\Event\Commands\ImportLabels;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
 use CultuurNet\UDB3\Event\Commands\UpdateLocation;
@@ -113,6 +114,10 @@ class EventDocumentImporter implements DocumentImporterInterface
         foreach ($adapter->getTitleTranslations() as $language => $title) {
             $language = new Language($language);
             $commands[] = new UpdateTitle($id, $language, $title);
+        }
+
+        if ($import->getLabels()->count() > 0) {
+            $commands[] = new ImportLabels($id, $import->getLabels());
         }
 
         foreach ($commands as $command) {
