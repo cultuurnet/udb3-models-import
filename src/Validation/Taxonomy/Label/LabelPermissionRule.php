@@ -46,6 +46,10 @@ class LabelPermissionRule extends AbstractRule
             return true;
         }
 
+        // @todo: If the label was already present no check needed.
+        // Inject the label relations projector to check if label is present
+        // @see \CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterface
+        // Also needs the item id, how to get the item id?
         return $this->labelRepository->canUseLabel(
             $this->userIdentification->getId(),
             new StringLiteral($input->getName()->toString())
