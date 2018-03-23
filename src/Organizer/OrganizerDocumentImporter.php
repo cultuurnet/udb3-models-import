@@ -11,6 +11,8 @@ use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Organizer\Organizer;
 use CultuurNet\UDB3\Organizer\Commands\CreateOrganizer;
+use CultuurNet\UDB3\Organizer\Commands\UpdateAddress;
+use CultuurNet\UDB3\Organizer\Commands\UpdateContactPoint;
 use CultuurNet\UDB3\Organizer\Commands\UpdateTitle;
 use CultuurNet\UDB3\Organizer\Commands\UpdateWebsite;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
@@ -81,6 +83,14 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
             );
 
             $commands[] = new UpdateWebsite($id, $url);
+        }
+
+        $contactPoint = $adapter->getContactPoint();
+        $commands[] = new UpdateContactPoint($id, $contactPoint);
+
+        $address = $adapter->getAddress();
+        if ($address) {
+            $commands[] = new UpdateAddress($id, $address);
         }
 
         foreach ($adapter->getTitleTranslations() as $language => $title) {

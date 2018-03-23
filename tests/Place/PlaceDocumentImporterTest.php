@@ -9,16 +9,28 @@ use CultuurNet\UDB3\Address\Address;
 use CultuurNet\UDB3\Address\Locality;
 use CultuurNet\UDB3\Address\PostalCode;
 use CultuurNet\UDB3\Address\Street;
+use CultuurNet\UDB3\BookingInfo;
 use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\CalendarType;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
 use CultuurNet\UDB3\Place\Commands\ImportLabels;
+use CultuurNet\UDB3\ContactPoint;
+use CultuurNet\UDB3\Description;
+use CultuurNet\UDB3\Offer\AgeRange;
+use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
+use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
+use CultuurNet\UDB3\Place\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
+use CultuurNet\UDB3\Place\Commands\UpdateContactPoint;
+use CultuurNet\UDB3\Place\Commands\UpdateDescription;
+use CultuurNet\UDB3\Place\Commands\UpdateOrganizer;
+use CultuurNet\UDB3\Place\Commands\UpdatePriceInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateTitle;
 use CultuurNet\UDB3\Place\Commands\UpdateType;
+use CultuurNet\UDB3\Place\Commands\UpdateTypicalAgeRange;
 use CultuurNet\UDB3\Place\Place;
 use CultuurNet\UDB3\Event\EventType;
 use CultuurNet\UDB3\Language;
@@ -28,10 +40,15 @@ use CultuurNet\UDB3\Model\Import\PreProcessing\TermPreProcessingDocumentImporter
 use CultuurNet\UDB3\Model\Serializer\Place\PlaceDenormalizer;
 use CultuurNet\UDB3\Place\Commands\CreatePlace;
 use CultuurNet\UDB3\Place\Commands\UpdateAddress;
+use CultuurNet\UDB3\PriceInfo\BasePrice;
+use CultuurNet\UDB3\PriceInfo\Price;
+use CultuurNet\UDB3\PriceInfo\PriceInfo;
 use CultuurNet\UDB3\Title;
 use PHPUnit\Framework\TestCase;
 use ValueObjects\Geography\Country;
 use ValueObjects\Geography\CountryCode;
+use ValueObjects\Money\Currency;
+use ValueObjects\Person\Age;
 
 class PlaceDocumentImporterTest extends TestCase
 {
@@ -119,6 +136,10 @@ class PlaceDocumentImporterTest extends TestCase
                 $id,
                 \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
             ),
+            new UpdateBookingInfo($id, new BookingInfo()),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new DeleteCurrentOrganizer($id),
+            new DeleteTypicalAgeRange($id),
             new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
             new UpdateTitle($id, new Language('en'), new Title('Example name')),
             new UpdateAddress(
@@ -198,6 +219,131 @@ class PlaceDocumentImporterTest extends TestCase
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
         $this->assertEquals($expectedCommands, $recordedCommands);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_description_and_translations()
+    {
+        $document = $this->getPlaceDocument();
+        $body = $document->getBody();
+        $body['description'] = [
+            'nl' => 'Voorbeeld beschrijving',
+            'en' => 'Example description',
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectPlaceExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdateDescription($id, new Language('nl'), new Description('Voorbeeld beschrijving')),
+            $recordedCommands
+        );
+
+        $this->assertContainsObject(
+            new UpdateDescription($id, new Language('en'), new Description('Example description')),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_organizer_id()
+    {
+        $document = $this->getPlaceDocument();
+        $body = $document->getBody();
+        $body['organizer'] = [
+            '@id' => 'http://io.uitdatabank.be/organizers/a106a4cb-5c5f-496b-97e0-4d63b9e09260',
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectPlaceExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdateOrganizer($id, 'a106a4cb-5c5f-496b-97e0-4d63b9e09260'),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_typical_age_range()
+    {
+        $document = $this->getPlaceDocument();
+        $body = $document->getBody();
+        $body['typicalAgeRange'] = '8-12';
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectPlaceExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdateTypicalAgeRange($id, new AgeRange(new Age(8), new Age(12))),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_price_info()
+    {
+        $document = $this->getPlaceDocument();
+        $body = $document->getBody();
+        $body['priceInfo'] = [
+            [
+                'category' => 'base',
+                'name' => ['nl' => 'Basistarief'],
+                'price' => 10,
+                'priceCurrency' => 'EUR',
+            ],
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectPlaceExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdatePriceInfo(
+                $id,
+                new PriceInfo(
+                    new BasePrice(
+                        new Price(1000),
+                        Currency::fromNative('EUR')
+                    )
+                )
+            ),
+            $recordedCommands
+        );
     }
 
     /**
@@ -311,6 +457,10 @@ class PlaceDocumentImporterTest extends TestCase
                 new Language('nl')
             ),
             new UpdateCalendar($id, new Calendar(CalendarType::PERMANENT())),
+            new UpdateBookingInfo($id, new BookingInfo()),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new DeleteCurrentOrganizer($id),
+            new DeleteTypicalAgeRange($id),
             new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
             new UpdateTitle($id, new Language('en'), new Title('Example name')),
             new UpdateAddress(
@@ -353,5 +503,16 @@ class PlaceDocumentImporterTest extends TestCase
             ->method('load')
             ->with($placeId)
             ->willThrowException(new AggregateNotFoundException());
+    }
+
+    private function assertContainsObject($needle, array $haystack)
+    {
+        $this->assertContains(
+            $needle,
+            $haystack,
+            '',
+            false,
+            false
+        );
     }
 }

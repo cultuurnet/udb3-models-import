@@ -9,19 +9,33 @@ use CultuurNet\UDB3\Address\Address;
 use CultuurNet\UDB3\Address\Locality;
 use CultuurNet\UDB3\Address\PostalCode;
 use CultuurNet\UDB3\Address\Street;
+use CultuurNet\UDB3\BookingInfo;
 use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\CalendarType;
+use CultuurNet\UDB3\ContactPoint;
+use CultuurNet\UDB3\Description;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
 use CultuurNet\UDB3\Event\Commands\ImportLabels;
+use CultuurNet\UDB3\Event\Commands\DeleteCurrentOrganizer;
+use CultuurNet\UDB3\Event\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
+use CultuurNet\UDB3\Event\Commands\UpdateAudience;
+use CultuurNet\UDB3\Event\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
+use CultuurNet\UDB3\Event\Commands\UpdateContactPoint;
+use CultuurNet\UDB3\Event\Commands\UpdateDescription;
 use CultuurNet\UDB3\Event\Commands\UpdateLocation;
+use CultuurNet\UDB3\Event\Commands\UpdateOrganizer;
+use CultuurNet\UDB3\Event\Commands\UpdatePriceInfo;
 use CultuurNet\UDB3\Event\Commands\UpdateTheme;
 use CultuurNet\UDB3\Event\Commands\UpdateTitle;
 use CultuurNet\UDB3\Event\Commands\UpdateType;
+use CultuurNet\UDB3\Event\Commands\UpdateTypicalAgeRange;
 use CultuurNet\UDB3\Event\Event;
 use CultuurNet\UDB3\Event\EventType;
 use CultuurNet\UDB3\Event\ReadModel\InMemoryDocumentRepository;
+use CultuurNet\UDB3\Event\ValueObjects\Audience;
+use CultuurNet\UDB3\Event\ValueObjects\AudienceType;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\Location;
 use CultuurNet\UDB3\Location\LocationId;
@@ -34,12 +48,18 @@ use CultuurNet\UDB3\Model\Serializer\Event\EventDenormalizer;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
+use CultuurNet\UDB3\Offer\AgeRange;
+use CultuurNet\UDB3\PriceInfo\BasePrice;
+use CultuurNet\UDB3\PriceInfo\Price;
+use CultuurNet\UDB3\PriceInfo\PriceInfo;
 use CultuurNet\UDB3\Theme;
 use CultuurNet\UDB3\Timestamp;
 use CultuurNet\UDB3\Title;
 use PHPUnit\Framework\TestCase;
 use ValueObjects\Geography\Country;
 use ValueObjects\Geography\CountryCode;
+use ValueObjects\Money\Currency;
+use ValueObjects\Person\Age;
 use ValueObjects\StringLiteral\StringLiteral;
 
 class EventDocumentImporterTest extends TestCase
@@ -164,6 +184,11 @@ class EventDocumentImporterTest extends TestCase
                 $id,
                 \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
             ),
+            new UpdateAudience($id, new Audience(AudienceType::EVERYONE())),
+            new UpdateBookingInfo($id, new BookingInfo()),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new DeleteCurrentOrganizer($id),
+            new DeleteTypicalAgeRange($id),
             new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
             new UpdateTitle($id, new Language('en'), new Title('Example name')),
         ];
@@ -209,20 +234,145 @@ class EventDocumentImporterTest extends TestCase
         $this->importer->import($document);
 
         $expectedCommands = $this->getExpectedCommands() + [
-                new ImportLabels(
-                    $this->getEventId(),
-                    new Labels(
-                        new Label(new LabelName('foo'), true),
-                        new Label(new LabelName('bar'), true),
-                        new Label(new LabelName('lorem'), false),
-                        new Label(new LabelName('ipsum'), false)
-                    )
+            new ImportLabels(
+                $this->getEventId(),
+                new Labels(
+                    new Label(new LabelName('foo'), true),
+                    new Label(new LabelName('bar'), true),
+                    new Label(new LabelName('lorem'), false),
+                    new Label(new LabelName('ipsum'), false)
                 )
-            ];
+            )
+        ];
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
         $this->assertEquals($expectedCommands, $recordedCommands);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_description_and_translations()
+    {
+        $document = $this->getEventDocument();
+        $body = $document->getBody();
+        $body['description'] = [
+            'nl' => 'Voorbeeld beschrijving',
+            'en' => 'Example description',
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectEventIdExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdateDescription($id, new Language('nl'), new Description('Voorbeeld beschrijving')),
+            $recordedCommands
+        );
+
+        $this->assertContainsObject(
+            new UpdateDescription($id, new Language('en'), new Description('Example description')),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_organizer_id()
+    {
+        $document = $this->getEventDocument();
+        $body = $document->getBody();
+        $body['organizer'] = [
+            '@id' => 'http://io.uitdatabank.be/organizers/a106a4cb-5c5f-496b-97e0-4d63b9e09260',
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectEventIdExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdateOrganizer($id, 'a106a4cb-5c5f-496b-97e0-4d63b9e09260'),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_typical_age_range()
+    {
+        $document = $this->getEventDocument();
+        $body = $document->getBody();
+        $body['typicalAgeRange'] = '8-12';
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectEventIdExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdateTypicalAgeRange($id, new AgeRange(new Age(8), new Age(12))),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_price_info()
+    {
+        $document = $this->getEventDocument();
+        $body = $document->getBody();
+        $body['priceInfo'] = [
+            [
+                'category' => 'base',
+                'name' => ['nl' => 'Basistarief'],
+                'price' => 10,
+                'priceCurrency' => 'EUR',
+            ],
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectEventIdExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdatePriceInfo(
+                $id,
+                new PriceInfo(
+                    new BasePrice(
+                        new Price(1000),
+                        Currency::fromNative('EUR')
+                    )
+                )
+            ),
+            $recordedCommands
+        );
     }
 
     private function getEventId()
@@ -298,6 +448,9 @@ class EventDocumentImporterTest extends TestCase
         return new DecodedDocument($this->getEventId(), $this->getEventDataWithLabels());
     }
 
+    /**
+     * @return array
+     */
     private function getExpectedCommands()
     {
         $id = $this->getEventId();
@@ -322,6 +475,11 @@ class EventDocumentImporterTest extends TestCase
                 )
             ),
             new UpdateTheme($id, new Theme('1.17.0.0.0', 'Antiek en brocante')),
+            new UpdateAudience($id, new Audience(AudienceType::EVERYONE())),
+            new UpdateBookingInfo($id, new BookingInfo()),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new DeleteCurrentOrganizer($id),
+            new DeleteTypicalAgeRange($id),
             new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
             new UpdateTitle($id, new Language('en'), new Title('Example name')),
         ];
@@ -392,5 +550,16 @@ class EventDocumentImporterTest extends TestCase
             ->method('load')
             ->with($eventId)
             ->willThrowException(new AggregateNotFoundException());
+    }
+
+    private function assertContainsObject($needle, array $haystack)
+    {
+        $this->assertContains(
+            $needle,
+            $haystack,
+            '',
+            false,
+            false
+        );
     }
 }
