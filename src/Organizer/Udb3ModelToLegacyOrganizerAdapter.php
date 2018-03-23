@@ -2,6 +2,8 @@
 
 namespace CultuurNet\UDB3\Model\Import\Organizer;
 
+use CultuurNet\UDB3\Address\Address;
+use CultuurNet\UDB3\ContactPoint;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Organizer\Organizer;
 use CultuurNet\UDB3\Title;
@@ -67,6 +69,30 @@ class Udb3ModelToLegacyOrganizerAdapter implements LegacyOrganizer
     }
 
     /**
+     * @inheritdoc
+     */
+    public function getAddress()
+    {
+        $address = $this->organizer->getAddress();
+
+        if ($address) {
+            $address = $address->getTranslation($address->getOriginalLanguage());
+            return Address::fromUdb3ModelAddress($address);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getContactPoint()
+    {
+        $contactPoint = $this->organizer->getContactPoint();
+        return ContactPoint::fromUdb3ModelContactPoint($contactPoint);
+    }
+
+    /**
      * @return Title[]
      *   Language code as key, and Title as value.
      */
@@ -83,5 +109,29 @@ class Udb3ModelToLegacyOrganizerAdapter implements LegacyOrganizer
         }
 
         return $titles;
+    }
+
+    /**
+     * @return Address[]
+     *   Language code as key, and Address as value.
+     */
+    public function getAddressTranslations()
+    {
+        $addresses = [];
+
+        /* @var \CultuurNet\UDB3\Model\ValueObject\Translation\Language $language */
+        $translatedAddress = $this->organizer->getAddress();
+
+        if (!$translatedAddress) {
+            return [];
+        }
+
+        foreach ($translatedAddress->getLanguagesWithoutOriginal() as $language) {
+            $addresses[$language->toString()] = Address::fromUdb3ModelAddress(
+                $translatedAddress->getTranslation($language)
+            );
+        }
+
+        return $addresses;
     }
 }

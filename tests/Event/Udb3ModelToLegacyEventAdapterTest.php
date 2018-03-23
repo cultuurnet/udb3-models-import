@@ -4,8 +4,10 @@ namespace CultuurNet\UDB3\Model\Import\Event;
 
 use CultuurNet\UDB3\Location\Location;
 use CultuurNet\UDB3\Model\Event\ImmutableEvent;
+use CultuurNet\UDB3\Model\Import\Offer\Udb3ModelToLegacyOfferAdapter;
 use CultuurNet\UDB3\Model\Place\ImmutablePlace;
 use CultuurNet\UDB3\Model\Place\PlaceReference;
+use CultuurNet\UDB3\Model\ValueObject\Audience\AudienceType;
 use CultuurNet\UDB3\Model\ValueObject\Calendar\OpeningHours\OpeningHours;
 use CultuurNet\UDB3\Model\ValueObject\Calendar\PermanentCalendar;
 use CultuurNet\UDB3\Model\ValueObject\Geography\Address;
@@ -35,9 +37,19 @@ class Udb3ModelToLegacyEventAdapterTest extends TestCase
     private $event;
 
     /**
+     * @var ImmutableEvent
+     */
+    private $completeEvent;
+
+    /**
      * @var Udb3ModelToLegacyEventAdapter
      */
     private $adapter;
+
+    /**
+     * @var Udb3ModelToLegacyOfferAdapter
+     */
+    private $completeAdapter;
 
     public function setUp()
     {
@@ -86,11 +98,16 @@ class Udb3ModelToLegacyEventAdapterTest extends TestCase
             )
         );
 
-        $this->event = $this->event->withAvailableFrom(
-            \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T10:00:00+01:00')
-        );
+        $this->completeEvent = $this->event
+            ->withAudienceType(
+                AudienceType::members()
+            )
+            ->withAvailableFrom(
+                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T10:00:00+01:00')
+            );
 
         $this->adapter = new Udb3ModelToLegacyEventAdapter($this->event);
+        $this->completeAdapter = new Udb3ModelToLegacyEventAdapter($this->completeEvent);
     }
 
     /**
@@ -109,6 +126,26 @@ class Udb3ModelToLegacyEventAdapterTest extends TestCase
             )
         );
         $actual = $this->adapter->getLocation();
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_return_audience_type_everyone_by_default()
+    {
+        $expected = \CultuurNet\UDB3\Event\ValueObjects\AudienceType::EVERYONE();
+        $actual = $this->adapter->getAudienceType();
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_return_the_audience_type_that_was_set()
+    {
+        $expected = \CultuurNet\UDB3\Event\ValueObjects\AudienceType::MEMBERS();
+        $actual = $this->completeAdapter->getAudienceType();
         $this->assertEquals($expected, $actual);
     }
 

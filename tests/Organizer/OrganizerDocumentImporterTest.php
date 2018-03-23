@@ -5,6 +5,13 @@ namespace CultuurNet\UDB3\Model\Import\Organizer;
 use Broadway\CommandHandling\Testing\TraceableCommandBus;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\Address\Address;
+use CultuurNet\UDB3\Address\Locality;
+use CultuurNet\UDB3\Address\PostalCode;
+use CultuurNet\UDB3\Address\Street;
+use CultuurNet\UDB3\ContactPoint;
+use CultuurNet\UDB3\Organizer\Commands\UpdateAddress;
+use CultuurNet\UDB3\Organizer\Commands\UpdateContactPoint;
 use CultuurNet\UDB3\Organizer\Commands\UpdateTitle;
 use CultuurNet\UDB3\Organizer\Commands\UpdateWebsite;
 use CultuurNet\UDB3\Organizer\Organizer;
@@ -15,6 +22,7 @@ use CultuurNet\UDB3\Model\Serializer\Organizer\OrganizerDenormalizer;
 use CultuurNet\UDB3\Organizer\Commands\CreateOrganizer;
 use CultuurNet\UDB3\Title;
 use PHPUnit\Framework\TestCase;
+use ValueObjects\Geography\Country;
 use ValueObjects\Web\Url;
 
 class OrganizerDocumentImporterTest extends TestCase
@@ -80,6 +88,7 @@ class OrganizerDocumentImporterTest extends TestCase
                 Url::fromNative('https://www.publiq.be'),
                 new Title('Voorbeeld naam')
             ),
+            new UpdateContactPoint($id, new ContactPoint()),
             new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
             new UpdateTitle($id, new Title('Example name'), new Language('en')),
         ];
@@ -106,6 +115,7 @@ class OrganizerDocumentImporterTest extends TestCase
         $expectedCommands = [
             new UpdateTitle($id, new Title('Voorbeeld naam'), new Language('nl')),
             new UpdateWebsite($id, Url::fromNative('https://www.publiq.be')),
+            new UpdateContactPoint($id, new ContactPoint()),
             new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
             new UpdateTitle($id, new Title('Example name'), new Language('en')),
         ];
@@ -113,6 +123,52 @@ class OrganizerDocumentImporterTest extends TestCase
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
         $this->assertEquals($expectedCommands, $recordedCommands);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_the_address()
+    {
+        $document = $this->getOrganizerDocument();
+        $body = $document->getBody();
+        $body['address'] = [
+            'nl' => [
+                'streetAddress' => 'Henegouwenkaai 41-43',
+                'postalCode' => '1080',
+                'addressLocality' => 'Brussel',
+                'addressCountry' => 'BE',
+            ],
+            'fr' => [
+                'streetAddress' => 'Quai du Hainaut 41-43',
+                'postalCode' => '1080',
+                'addressLocality' => 'Bruxelles',
+                'addressCountry' => 'BE',
+            ],
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectOrganizerExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new UpdateAddress(
+                $id,
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussel'),
+                    Country::fromNative('BE')
+                )
+            ),
+            $recordedCommands
+        );
     }
 
     /**
@@ -165,5 +221,16 @@ class OrganizerDocumentImporterTest extends TestCase
             ->method('load')
             ->with($organizerId)
             ->willThrowException(new AggregateNotFoundException());
+    }
+
+    private function assertContainsObject($needle, array $haystack)
+    {
+        $this->assertContains(
+            $needle,
+            $haystack,
+            '',
+            false,
+            false
+        );
     }
 }
