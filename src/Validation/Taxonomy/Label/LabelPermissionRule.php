@@ -42,6 +42,10 @@ class LabelPermissionRule extends AbstractRule
             return false;
         }
 
+        if ($this->userIdentification->isGodUser()) {
+            return true;
+        }
+
         return $this->labelRepository->canUseLabel(
             $this->userIdentification->getId(),
             new StringLiteral($input->getName()->toString())
