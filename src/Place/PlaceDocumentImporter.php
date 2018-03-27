@@ -6,9 +6,16 @@ use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\Place\Commands\CreatePlace;
+use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
+use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateAddress;
+use CultuurNet\UDB3\Place\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
+use CultuurNet\UDB3\Place\Commands\UpdateContactPoint;
+use CultuurNet\UDB3\Place\Commands\UpdateDescription;
+use CultuurNet\UDB3\Place\Commands\UpdateOrganizer;
+use CultuurNet\UDB3\Place\Commands\UpdatePriceInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateTheme;
 use CultuurNet\UDB3\Place\Commands\UpdateTitle;
 use CultuurNet\UDB3\Place\Commands\UpdateType;
@@ -16,6 +23,7 @@ use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Place\Place;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
+use CultuurNet\UDB3\Place\Commands\UpdateTypicalAgeRange;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
 class PlaceDocumentImporter implements DocumentImporterInterface
@@ -109,9 +117,44 @@ class PlaceDocumentImporter implements DocumentImporterInterface
             }
         }
 
+        $bookingInfo = $adapter->getBookingInfo();
+        $commands[] = new UpdateBookingInfo($id, $bookingInfo);
+
+        $contactPoint = $adapter->getContactPoint();
+        $commands[] = new UpdateContactPoint($id, $contactPoint);
+
+        $description = $adapter->getDescription();
+        if ($description) {
+            $commands[] = new UpdateDescription($id, $mainLanguage, $description);
+        }
+
+        $organizerId = $adapter->getOrganizerId();
+        if ($organizerId) {
+            $commands[] = new UpdateOrganizer($id, $organizerId);
+        } else {
+            $commands[] = new DeleteCurrentOrganizer($id);
+        }
+
+        $ageRange = $adapter->getAgeRange();
+        if ($ageRange) {
+            $commands[] = new UpdateTypicalAgeRange($id, $ageRange);
+        } else {
+            $commands[] = new DeleteTypicalAgeRange($id);
+        }
+
+        $priceInfo = $adapter->getPriceInfo();
+        if ($priceInfo) {
+            $commands[] = new UpdatePriceInfo($id, $priceInfo);
+        }
+
         foreach ($adapter->getTitleTranslations() as $language => $title) {
             $language = new Language($language);
             $commands[] = new UpdateTitle($id, $language, $title);
+        }
+
+        foreach ($adapter->getDescriptionTranslations() as $language => $description) {
+            $language = new Language($language);
+            $commands[] = new UpdateDescription($id, $language, $description);
         }
 
         foreach ($adapter->getAddressTranslations() as $language => $address) {

@@ -6,12 +6,22 @@ use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
+use CultuurNet\UDB3\Event\Commands\DeleteCurrentOrganizer;
+use CultuurNet\UDB3\Event\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
+use CultuurNet\UDB3\Event\Commands\UpdateAudience;
+use CultuurNet\UDB3\Event\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
+use CultuurNet\UDB3\Event\Commands\UpdateContactPoint;
+use CultuurNet\UDB3\Event\Commands\UpdateDescription;
 use CultuurNet\UDB3\Event\Commands\UpdateLocation;
+use CultuurNet\UDB3\Event\Commands\UpdateOrganizer;
+use CultuurNet\UDB3\Event\Commands\UpdatePriceInfo;
 use CultuurNet\UDB3\Event\Commands\UpdateTheme;
 use CultuurNet\UDB3\Event\Commands\UpdateTitle;
 use CultuurNet\UDB3\Event\Commands\UpdateType;
+use CultuurNet\UDB3\Event\Commands\UpdateTypicalAgeRange;
+use CultuurNet\UDB3\Event\ValueObjects\Audience;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
@@ -110,9 +120,47 @@ class EventDocumentImporter implements DocumentImporterInterface
             }
         }
 
+        $audienceType = $adapter->getAudienceType();
+        $commands[] = new UpdateAudience($id, new Audience($audienceType));
+
+        $bookingInfo = $adapter->getBookingInfo();
+        $commands[] = new UpdateBookingInfo($id, $bookingInfo);
+
+        $contactPoint = $adapter->getContactPoint();
+        $commands[] = new UpdateContactPoint($id, $contactPoint);
+
+        $description = $adapter->getDescription();
+        if ($description) {
+            $commands[] = new UpdateDescription($id, $mainLanguage, $description);
+        }
+
+        $organizerId = $adapter->getOrganizerId();
+        if ($organizerId) {
+            $commands[] = new UpdateOrganizer($id, $organizerId);
+        } else {
+            $commands[] = new DeleteCurrentOrganizer($id);
+        }
+
+        $ageRange = $adapter->getAgeRange();
+        if ($ageRange) {
+            $commands[] = new UpdateTypicalAgeRange($id, $ageRange);
+        } else {
+            $commands[] = new DeleteTypicalAgeRange($id);
+        }
+
+        $priceInfo = $adapter->getPriceInfo();
+        if ($priceInfo) {
+            $commands[] = new UpdatePriceInfo($id, $priceInfo);
+        }
+
         foreach ($adapter->getTitleTranslations() as $language => $title) {
             $language = new Language($language);
             $commands[] = new UpdateTitle($id, $language, $title);
+        }
+
+        foreach ($adapter->getDescriptionTranslations() as $language => $description) {
+            $language = new Language($language);
+            $commands[] = new UpdateDescription($id, $language, $description);
         }
 
         foreach ($commands as $command) {
