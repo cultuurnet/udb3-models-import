@@ -9,6 +9,7 @@ use CultuurNet\UDB3\Label\ValueObjects\RelationType;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
+use Respect\Validation\Validator;
 use ValueObjects\StringLiteral\StringLiteral;
 
 class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
@@ -34,7 +35,7 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
     private $labelRelationsRepository;
 
     /**
-     * @ver LabelPermissionRule
+     * @var LabelPermissionRule
      */
     private $labelPermissionRule;
 
@@ -78,8 +79,6 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
      */
     public function it_does_not_delegates_validation_to_label_repository_for_existing_labels_and_non_god_user()
     {
-        $userId = new StringLiteral('user_id');
-
         $this->userIdentification->expects($this->once())
             ->method('isGodUser')
             ->willReturn(false);
@@ -148,5 +147,44 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue(
             $this->labelPermissionRule->validate('foo')
         );
+    }
+
+    /**
+     * @test
+     */
+    public function it_creates_label_permission_rule_exception_on_assert()
+    {
+        $userId = new StringLiteral('user_id');
+
+        $this->userIdentification->expects($this->once())
+            ->method('isGodUser')
+            ->willReturn(false);
+
+        $this->labelRelationsRepository->expects($this->once())
+            ->method('getLabelRelationsForItem')
+            ->with($this->documentId)
+            ->willReturn([
+                new LabelRelation(
+                    new \CultuurNet\UDB3\Label\ValueObjects\LabelName('bar'),
+                    RelationType::EVENT(),
+                    $this->documentId,
+                    false
+                ),
+            ]);
+
+        $this->labelsRepository->expects($this->once())
+            ->method('canUseLabel')
+            ->with($userId, new StringLiteral('foo'))
+            ->willReturn(false);
+
+        $this->userIdentification->expects($this->once())
+            ->method('getId')
+            ->willReturn($userId);
+
+        $this->expectException(LabelPermissionRuleException::class);
+        // @todo: How to set the string?
+        $this->expectExceptionMessage('Data validation failed for %s');
+
+        $this->labelPermissionRule->assert('foo');
     }
 }
