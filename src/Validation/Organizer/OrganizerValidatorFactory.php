@@ -6,6 +6,7 @@ use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as 
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterface as LabelRelationsRepository;
 use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Label\LabelPermissionRule;
 use CultuurNet\UDB3\Model\Organizer\OrganizerIDParser;
+use CultuurNet\UDB3\Model\Validation\DocumentValidatorFactory;
 use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
 use CultuurNet\UDB3\Organizer\DBALWebsiteLookupService;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
@@ -13,7 +14,7 @@ use Doctrine\DBAL\Connection;
 use Respect\Validation\Validator;
 use ValueObjects\StringLiteral\StringLiteral;
 
-class OrganizerValidatorFactory
+class OrganizerValidatorFactory implements DocumentValidatorFactory
 {
     /**
      * @var Connection
