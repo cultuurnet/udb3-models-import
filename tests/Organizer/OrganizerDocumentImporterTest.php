@@ -137,17 +137,16 @@ class OrganizerDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommands() + [
-            new ImportLabels(
-                $this->getOrganizerId(),
-                new Labels(
-                    new Label(new LabelName('foo'), true),
-                    new Label(new LabelName('bar'), true),
-                    new Label(new LabelName('lorem'), false),
-                    new Label(new LabelName('ipsum'), false)
-                )
+        $expectedCommands = $this->getExpectedCommands();
+        $expectedCommands[] = new ImportLabels(
+            $this->getOrganizerId(),
+            new Labels(
+                new Label(new LabelName('foo'), true),
+                new Label(new LabelName('bar'), true),
+                new Label(new LabelName('lorem'), false),
+                new Label(new LabelName('ipsum'), false)
             )
-        ];
+        );
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
@@ -230,20 +229,20 @@ class OrganizerDocumentImporterTest extends TestCase
      */
     private function getOrganizerDataWithLabels()
     {
-        return $this->getOrganizerData() + [
+        return $this->getOrganizerData() +
             [
                 'labels' => [
                     'foo',
                     'bar',
                 ]
-            ],
+            ]
+            +
             [
                 'hiddenLabels' => [
                     'lorem',
                     'ipsum',
                 ]
-            ]
-        ];
+            ];
     }
 
     /**
