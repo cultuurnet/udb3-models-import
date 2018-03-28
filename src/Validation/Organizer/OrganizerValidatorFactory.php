@@ -79,6 +79,16 @@ class OrganizerValidatorFactory implements DocumentValidatorFactory
                 ),
                 false
             ),
+            new Key(
+                'hiddenLabels',
+                new LabelPermissionRule(
+                    new StringLiteral($id),
+                    $this->userIdentification,
+                    $this->labelsRepository,
+                    $this->labelRelationsRepository
+                ),
+                false
+            ),
         ];
 
         return new OrganizerValidator($extraRules, true);
