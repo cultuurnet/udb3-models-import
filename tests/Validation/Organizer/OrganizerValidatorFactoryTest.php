@@ -79,10 +79,6 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
 
         $organizerValidator = $organizerValidatorFactory->forDocumentId($this->documentId);
 
-        // @todo: Rule arrays are associative so can't be compared, how to compare?
-        $rules = $organizerValidator->getRules();
-        $this->assertCount(10, $rules);
-        $this->assertInstanceOf(Key::class, end($rules));
-        $this->assertInstanceOf(OrganizerHasUniqueUrlValidator::class, prev($rules));
+        $this->assertInstanceOf(OrganizerValidator::class, $organizerValidator);
     }
 }
