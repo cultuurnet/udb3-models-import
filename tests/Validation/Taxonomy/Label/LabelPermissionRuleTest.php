@@ -59,22 +59,6 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      */
-    public function it_can_only_validate_for_label_instances()
-    {
-        $this->userIdentification->expects($this->never())
-            ->method('isGodUser');
-
-        $this->labelsRepository->expects($this->never())
-            ->method('canUseLabel');
-
-        $this->assertFalse(
-            $this->labelPermissionRule->validate(new StringLiteral('foo'))
-        );
-    }
-
-    /**
-     * @test
-     */
     public function a_god_user_can_use_all_labels()
     {
         $this->userIdentification->expects($this->once())
@@ -85,9 +69,7 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
             ->method('canUseLabel');
 
         $this->assertTrue(
-            $this->labelPermissionRule->validate(
-                new Label(new LabelName('foo'), true)
-            )
+            $this->labelPermissionRule->validate('foo')
         );
     }
 
@@ -127,9 +109,7 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
             ->method('getId');
 
         $this->assertTrue(
-            $this->labelPermissionRule->validate(
-                new Label(new LabelName('foo'), true)
-            )
+            $this->labelPermissionRule->validate('foo')
         );
     }
 
@@ -166,9 +146,7 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
             ->willReturn($userId);
 
         $this->assertTrue(
-            $this->labelPermissionRule->validate(
-                new Label(new LabelName('foo'), true)
-            )
+            $this->labelPermissionRule->validate('foo')
         );
     }
 }
