@@ -8,9 +8,8 @@ use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Label\LabelPermissionRule;
 use CultuurNet\UDB3\Model\Organizer\OrganizerIDParser;
 use CultuurNet\UDB3\Model\Validation\DocumentValidatorFactory;
 use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
-use CultuurNet\UDB3\Organizer\DBALWebsiteLookupService;
+use CultuurNet\UDB3\Organizer\WebsiteLookupServiceInterface;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
-use Doctrine\DBAL\Connection;
 use Respect\Validation\Rules\Key;
 use Respect\Validation\Validator;
 use ValueObjects\StringLiteral\StringLiteral;
@@ -18,9 +17,9 @@ use ValueObjects\StringLiteral\StringLiteral;
 class OrganizerValidatorFactory implements DocumentValidatorFactory
 {
     /**
-     * @var Connection
+     * @var WebsiteLookupServiceInterface
      */
-    private $connection;
+    private $websiteLookupService;
 
     /**
      * @var UserIdentificationInterface
@@ -38,18 +37,18 @@ class OrganizerValidatorFactory implements DocumentValidatorFactory
     private $labelRelationsRepository;
 
     /**
-     * @param Connection $connection
+     * @param WebsiteLookupServiceInterface $websiteLookupService
      * @param UserIdentificationInterface $userIdentification
      * @param LabelsRepository $labelsRepository
      * @param LabelRelationsRepository $labelRelationsRepository
      */
     public function __construct(
-        Connection $connection,
+        WebsiteLookupServiceInterface $websiteLookupService,
         UserIdentificationInterface $userIdentification,
         LabelsRepository $labelsRepository,
         LabelRelationsRepository $labelRelationsRepository
     ) {
-        $this->connection = $connection;
+        $this->websiteLookupService = $websiteLookupService;
         $this->userIdentification = $userIdentification;
         $this->labelsRepository = $labelsRepository;
         $this->labelRelationsRepository = $labelRelationsRepository;
@@ -64,10 +63,7 @@ class OrganizerValidatorFactory implements DocumentValidatorFactory
         $extraRules = [
             new OrganizerHasUniqueUrlValidator(
                 new OrganizerIDParser(),
-                new DBALWebsiteLookupService(
-                    $this->connection,
-                    'organizer_unique_websites'
-                )
+                $this->websiteLookupService
             ),
             new Key(
                 'labels',

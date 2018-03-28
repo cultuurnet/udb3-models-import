@@ -8,6 +8,7 @@ use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Label\LabelPermissionRule;
 use CultuurNet\UDB3\Model\Organizer\OrganizerIDParser;
 use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
 use CultuurNet\UDB3\Organizer\DBALWebsiteLookupService;
+use CultuurNet\UDB3\Organizer\WebsiteLookupServiceInterface;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 use Doctrine\DBAL\Connection;
 use Respect\Validation\Rules\Key;
@@ -21,9 +22,9 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
     private $documentId;
 
     /**
-     * @var Connection|\PHPUnit_Framework_MockObject_MockObject
+     * @var WebsiteLookupServiceInterface|\PHPUnit_Framework_MockObject_MockObject
      */
-    private $connection;
+    private $websiteLookupService;
 
     /**
      * @var UserIdentificationInterface|\PHPUnit_Framework_MockObject_MockObject
@@ -49,7 +50,7 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
     {
         $this->documentId = 'f32227be-a621-4cbd-8803-19762d7f9a23';
 
-        $this->connection = $this->createMock(Connection::class);
+        $this->websiteLookupService = $this->createMock(WebsiteLookupServiceInterface::class);
 
         $this->userIdentification = $this->createMock(UserIdentificationInterface::class);
 
@@ -71,7 +72,7 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
     public function it_creates_organizer_validator_for_document_id()
     {
         $organizerValidatorFactory = new OrganizerValidatorFactory(
-            $this->connection,
+            $this->websiteLookupService,
             $this->userIdentification,
             $this->labelsRepository,
             $this->labelRelationsRepository
