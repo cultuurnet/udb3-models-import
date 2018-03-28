@@ -30,5 +30,6 @@ class PlaceValidatorFactory implements DocumentValidatorFactory
             ),
         ];
 
-        return new PlaceValidator($extraRules);}
+        return new PlaceValidator($extraRules);
+    }
 }
