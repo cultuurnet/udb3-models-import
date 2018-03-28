@@ -10,6 +10,7 @@ use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
 use CultuurNet\UDB3\Organizer\DBALWebsiteLookupService;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 use Doctrine\DBAL\Connection;
+use Respect\Validation\Rules\Key;
 use ValueObjects\StringLiteral\StringLiteral;
 
 class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
@@ -78,10 +79,10 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
 
         $organizerValidator = $organizerValidatorFactory->forDocumentId($this->documentId);
 
-        // Rule arrays are associative so can't be compared.
+        // @todo: Rule arrays are associative so can't be compared, how to compare?
         $rules = $organizerValidator->getRules();
         $this->assertCount(10, $rules);
-        $this->assertInstanceOf(LabelPermissionRule::class, end($rules));
+        $this->assertInstanceOf(Key::class, end($rules));
         $this->assertInstanceOf(OrganizerHasUniqueUrlValidator::class, prev($rules));
     }
 }

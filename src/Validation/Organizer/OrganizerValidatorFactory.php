@@ -11,6 +11,7 @@ use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
 use CultuurNet\UDB3\Organizer\DBALWebsiteLookupService;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 use Doctrine\DBAL\Connection;
+use Respect\Validation\Rules\Key;
 use Respect\Validation\Validator;
 use ValueObjects\StringLiteral\StringLiteral;
 
@@ -68,11 +69,15 @@ class OrganizerValidatorFactory implements DocumentValidatorFactory
                     'organizer_unique_websites'
                 )
             ),
-            new LabelPermissionRule(
-                new StringLiteral($id),
-                $this->userIdentification,
-                $this->labelsRepository,
-                $this->labelRelationsRepository
+            new Key(
+                'labels',
+                new LabelPermissionRule(
+                    new StringLiteral($id),
+                    $this->userIdentification,
+                    $this->labelsRepository,
+                    $this->labelRelationsRepository
+                ),
+                false
             ),
         ];
 
