@@ -5,9 +5,11 @@ namespace CultuurNet\UDB3\Model\Import\Place;
 use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Place\Commands\CreatePlace;
 use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
+use CultuurNet\UDB3\Place\Commands\ImportImages;
 use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateAddress;
 use CultuurNet\UDB3\Place\Commands\UpdateBookingInfo;
@@ -39,6 +41,11 @@ class PlaceDocumentImporter implements DocumentImporterInterface
     private $placeDenormalizer;
 
     /**
+     * @var ImageCollectionFactory
+     */
+    private $imageCollectionFactory;
+
+    /**
      * @var CommandBusInterface
      */
     private $commandBus;
@@ -46,10 +53,12 @@ class PlaceDocumentImporter implements DocumentImporterInterface
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $placeDenormalizer,
+        ImageCollectionFactory $imageCollectionFactory,
         CommandBusInterface $commandBus
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->placeDenormalizer = $placeDenormalizer;
+        $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
     }
 
@@ -161,6 +170,9 @@ class PlaceDocumentImporter implements DocumentImporterInterface
             $language = new Language($language);
             $commands[] = new UpdateAddress($id, $address, $language);
         }
+
+        $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
+        $commands[] = new ImportImages($id, $images);
 
         foreach ($commands as $command) {
             $this->commandBus->dispatch($command);
