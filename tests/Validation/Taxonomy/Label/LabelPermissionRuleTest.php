@@ -8,6 +8,7 @@ use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterfac
 use CultuurNet\UDB3\Label\ValueObjects\RelationType;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUID;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
+use Respect\Validation\Exceptions\ValidationException;
 use ValueObjects\StringLiteral\StringLiteral;
 
 class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
@@ -179,9 +180,8 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
             ->method('getId')
             ->willReturn($userId);
 
-        $this->expectException(LabelPermissionRuleException::class);
-        // @todo: How to set the string?
-        $this->expectExceptionMessage('Data validation failed for %s');
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('no permission to use label foo');
 
         $this->labelPermissionRule->assert('foo');
     }

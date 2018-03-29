@@ -6,6 +6,7 @@ use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as 
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterface as LabelRelationsRepository;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUID;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
+use Respect\Validation\Exceptions\ValidationException;
 use Respect\Validation\Rules\AbstractRule;
 use ValueObjects\StringLiteral\StringLiteral;
 
@@ -55,6 +56,8 @@ class LabelPermissionRule extends AbstractRule
      */
     public function validate($input)
     {
+        $this->setName($input);
+
         // A god user can use every label.
         if ($this->userIdentification->isGodUser()) {
             return true;
@@ -82,6 +85,7 @@ class LabelPermissionRule extends AbstractRule
      */
     protected function createException()
     {
-        return new LabelPermissionRuleException();
+        $validationException = new ValidationException();
+        return $validationException->setTemplate('no permission to use label {{name}}');
     }
 }
