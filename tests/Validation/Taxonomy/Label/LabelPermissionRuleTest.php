@@ -6,16 +6,14 @@ use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as 
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\LabelRelation;
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterface as LabelRelationsRepository;
 use CultuurNet\UDB3\Label\ValueObjects\RelationType;
-use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
-use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
+use CultuurNet\UDB3\Model\ValueObject\Identity\UUID;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
-use Respect\Validation\Validator;
 use ValueObjects\StringLiteral\StringLiteral;
 
 class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * @var StringLiteral
+     * @var UUID
      */
     private $documentId;
 
@@ -41,7 +39,7 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->documentId = new StringLiteral('f32227be-a621-4cbd-8803-19762d7f9a23');
+        $this->documentId = new UUID('f32227be-a621-4cbd-8803-19762d7f9a23');
 
         $this->userIdentification = $this->createMock(UserIdentificationInterface::class);
 
@@ -85,18 +83,18 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
 
         $this->labelRelationsRepository->expects($this->once())
             ->method('getLabelRelationsForItem')
-            ->with($this->documentId)
+            ->with(new StringLiteral($this->documentId->toString()))
             ->willReturn([
                 new LabelRelation(
                     new \CultuurNet\UDB3\Label\ValueObjects\LabelName('foo'),
                     RelationType::EVENT(),
-                    $this->documentId,
+                    new StringLiteral($this->documentId->toString()),
                     false
                 ),
                 new LabelRelation(
                     new \CultuurNet\UDB3\Label\ValueObjects\LabelName('bar'),
                     RelationType::EVENT(),
-                    $this->documentId,
+                    new StringLiteral($this->documentId->toString()),
                     false
                 ),
             ]);
@@ -125,12 +123,12 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
 
         $this->labelRelationsRepository->expects($this->once())
             ->method('getLabelRelationsForItem')
-            ->with($this->documentId)
+            ->with(new StringLiteral($this->documentId->toString()))
             ->willReturn([
                 new LabelRelation(
                     new \CultuurNet\UDB3\Label\ValueObjects\LabelName('bar'),
                     RelationType::EVENT(),
-                    $this->documentId,
+                    new StringLiteral($this->documentId->toString()),
                     false
                 ),
             ]);
@@ -162,12 +160,12 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
 
         $this->labelRelationsRepository->expects($this->once())
             ->method('getLabelRelationsForItem')
-            ->with($this->documentId)
+            ->with(new StringLiteral($this->documentId->toString()))
             ->willReturn([
                 new LabelRelation(
                     new \CultuurNet\UDB3\Label\ValueObjects\LabelName('bar'),
                     RelationType::EVENT(),
-                    $this->documentId,
+                    new StringLiteral($this->documentId->toString()),
                     false
                 ),
             ]);
