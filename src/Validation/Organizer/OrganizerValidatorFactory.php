@@ -8,6 +8,7 @@ use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Label\LabelPermissionRule;
 use CultuurNet\UDB3\Model\Organizer\OrganizerIDParser;
 use CultuurNet\UDB3\Model\Validation\DocumentValidatorFactory;
 use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
+use CultuurNet\UDB3\Model\ValueObject\Identity\UUID;
 use CultuurNet\UDB3\Organizer\WebsiteLookupServiceInterface;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 use Respect\Validation\Rules\Key;
@@ -68,7 +69,7 @@ class OrganizerValidatorFactory implements DocumentValidatorFactory
             new Key(
                 'labels',
                 new LabelPermissionRule(
-                    new StringLiteral($id),
+                    new UUID($id),
                     $this->userIdentification,
                     $this->labelsRepository,
                     $this->labelRelationsRepository
@@ -78,7 +79,7 @@ class OrganizerValidatorFactory implements DocumentValidatorFactory
             new Key(
                 'hiddenLabels',
                 new LabelPermissionRule(
-                    new StringLiteral($id),
+                    new UUID($id),
                     $this->userIdentification,
                     $this->labelsRepository,
                     $this->labelRelationsRepository

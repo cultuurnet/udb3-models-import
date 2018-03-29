@@ -4,6 +4,7 @@ namespace CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Label;
 
 use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as LabelsRepository;
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterface as LabelRelationsRepository;
+use CultuurNet\UDB3\Model\ValueObject\Identity\UUID;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 use Respect\Validation\Rules\AbstractRule;
 use ValueObjects\StringLiteral\StringLiteral;
@@ -11,7 +12,7 @@ use ValueObjects\StringLiteral\StringLiteral;
 class LabelPermissionRule extends AbstractRule
 {
     /**
-     * @var string
+     * @var UUID
      */
     private $documentId;
 
@@ -31,13 +32,13 @@ class LabelPermissionRule extends AbstractRule
     private $labelRelationsRepository;
 
     /**
-     * @param StringLiteral $documentId
+     * @param UUID $documentId
      * @param UserIdentificationInterface $userIdentification
      * @param LabelsRepository $labelsRepository
      * @param LabelRelationsRepository $labelsRelationsRepository
      */
     public function __construct(
-        StringLiteral $documentId,
+        UUID $documentId,
         UserIdentificationInterface $userIdentification,
         LabelsRepository $labelsRepository,
         LabelRelationsRepository $labelsRelationsRepository
@@ -60,7 +61,9 @@ class LabelPermissionRule extends AbstractRule
         }
 
         // If the label is already present on the item no permission check is needed.
-        $labelRelations = $this->labelRelationsRepository->getLabelRelationsForItem($this->documentId);
+        $labelRelations = $this->labelRelationsRepository->getLabelRelationsForItem(
+            new StringLiteral($this->documentId->toString())
+        );
         foreach ($labelRelations as $labelRelation) {
             if ($labelRelation->getLabelName()->toNative() === $input) {
                 return true;

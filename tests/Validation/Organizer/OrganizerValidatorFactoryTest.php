@@ -5,19 +5,15 @@ namespace CultuurNet\UDB3\Model\Import\Validation\Organizer;
 use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as LabelsRepository;
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterface as LabelRelationsRepository;
 use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Label\LabelPermissionRule;
-use CultuurNet\UDB3\Model\Organizer\OrganizerIDParser;
 use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
-use CultuurNet\UDB3\Organizer\DBALWebsiteLookupService;
+use CultuurNet\UDB3\Model\ValueObject\Identity\UUID;
 use CultuurNet\UDB3\Organizer\WebsiteLookupServiceInterface;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
-use Doctrine\DBAL\Connection;
-use Respect\Validation\Rules\Key;
-use ValueObjects\StringLiteral\StringLiteral;
 
 class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * @var string
+     * @var UUID
      */
     private $documentId;
 
@@ -48,7 +44,7 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->documentId = 'f32227be-a621-4cbd-8803-19762d7f9a23';
+        $this->documentId = new UUID('f32227be-a621-4cbd-8803-19762d7f9a23');
 
         $this->websiteLookupService = $this->createMock(WebsiteLookupServiceInterface::class);
 
@@ -59,7 +55,7 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
         $this->labelRelationsRepository = $this->createMock(LabelRelationsRepository::class);
 
         $this->labelPermissionRule = new LabelPermissionRule(
-            new StringLiteral($this->documentId),
+            $this->documentId,
             $this->userIdentification,
             $this->labelsRepository,
             $this->labelRelationsRepository
@@ -78,7 +74,7 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
             $this->labelRelationsRepository
         );
 
-        $organizerValidator = $organizerValidatorFactory->forDocumentId($this->documentId);
+        $organizerValidator = $organizerValidatorFactory->forDocumentId($this->documentId->toString());
 
         $this->assertInstanceOf(OrganizerValidator::class, $organizerValidator);
     }
