@@ -212,7 +212,7 @@ class EventDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommands();
+        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
@@ -233,7 +233,7 @@ class EventDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommands();
+        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
         $expectedCommands[] = new ImportLabels(
             $this->getEventId(),
             new Labels(
@@ -450,7 +450,7 @@ class EventDocumentImporterTest extends TestCase
     /**
      * @return array
      */
-    private function getExpectedCommands()
+    private function getExpectedCommandsForRequiredFields()
     {
         $id = $this->getEventId();
 

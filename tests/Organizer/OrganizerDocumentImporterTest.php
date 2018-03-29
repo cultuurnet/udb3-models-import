@@ -116,7 +116,7 @@ class OrganizerDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommands();
+        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
@@ -137,7 +137,7 @@ class OrganizerDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommands();
+        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
         $expectedCommands[] = new ImportLabels(
             $this->getOrganizerId(),
             new Labels(
@@ -264,7 +264,7 @@ class OrganizerDocumentImporterTest extends TestCase
     /**
      * @return array
      */
-    private function getExpectedCommands()
+    private function getExpectedCommandsForRequiredFields()
     {
         $id = $this->getOrganizerId();
 

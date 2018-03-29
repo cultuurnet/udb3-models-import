@@ -183,7 +183,7 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommands();
+        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
@@ -204,7 +204,7 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommands();
+        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
         $expectedCommands[] = new ImportLabels(
             $this->getPlaceId(),
             new Labels(
@@ -438,7 +438,7 @@ class PlaceDocumentImporterTest extends TestCase
     /**
      * @return array
      */
-    private function getExpectedCommands()
+    private function getExpectedCommandsForRequiredFields()
     {
         $id = $this->getPlaceId();
 
