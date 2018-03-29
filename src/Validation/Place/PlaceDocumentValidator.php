@@ -44,7 +44,7 @@ class PlaceDocumentValidator extends PlaceValidator
                 $userIdentification,
                 $labelsRepository,
                 $labelRelationsRepository
-            )
+            ),
         ];
 
         parent::__construct($extraRules);
