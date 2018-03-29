@@ -6,16 +6,16 @@ use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as 
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterface as LabelRelationsRepository;
 use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Label\LabelPermissionRule;
 use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
-use CultuurNet\UDB3\Model\ValueObject\Identity\UUID;
+use CultuurNet\UDB3\Model\ValueObject\Identity\UUIDParser;
 use CultuurNet\UDB3\Organizer\WebsiteLookupServiceInterface;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 
-class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
+class OrganizerDocumentValidatorTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * @var UUID
+     * @var UUIDParser
      */
-    private $documentId;
+    private $uuidParser;
 
     /**
      * @var WebsiteLookupServiceInterface|\PHPUnit_Framework_MockObject_MockObject
@@ -37,14 +37,9 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
      */
     private $labelRelationsRepository;
 
-    /**
-     * @ver LabelPermissionRule
-     */
-    private $labelPermissionRule;
-
     protected function setUp()
     {
-        $this->documentId = new UUID('f32227be-a621-4cbd-8803-19762d7f9a23');
+        $this->uuidParser = $this->createMock(UUIDParser::class);
 
         $this->websiteLookupService = $this->createMock(WebsiteLookupServiceInterface::class);
 
@@ -53,29 +48,22 @@ class OrganizerValidatorFactoryTest extends \PHPUnit_Framework_TestCase
         $this->labelsRepository = $this->createMock(LabelsRepository::class);
 
         $this->labelRelationsRepository = $this->createMock(LabelRelationsRepository::class);
-
-        $this->labelPermissionRule = new LabelPermissionRule(
-            $this->documentId,
-            $this->userIdentification,
-            $this->labelsRepository,
-            $this->labelRelationsRepository
-        );
     }
 
     /**
      * @test
      */
-    public function it_creates_organizer_validator_for_document_id()
+    public function it_creates_organizer_validator_for_document()
     {
-        $organizerValidatorFactory = new OrganizerValidatorFactory(
+        $organizerDocumentValidator = new OrganizerDocumentValidator(
             $this->websiteLookupService,
+            $this->uuidParser,
             $this->userIdentification,
             $this->labelsRepository,
-            $this->labelRelationsRepository
+            $this->labelRelationsRepository,
+            true
         );
 
-        $organizerValidator = $organizerValidatorFactory->forDocumentId($this->documentId->toString());
-
-        $this->assertInstanceOf(OrganizerValidator::class, $organizerValidator);
+        $this->assertInstanceOf(OrganizerValidator::class, $organizerDocumentValidator);
     }
 }
