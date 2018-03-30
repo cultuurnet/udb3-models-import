@@ -90,7 +90,7 @@ class MediaObjectsExistValidatorTest extends TestCase
         $this->mediaManager->expects($this->any())
             ->method('get')
             ->willReturnCallback(
-                function($id) use ($ids) {
+                function ($id) use ($ids) {
                     $exists = in_array($id, $ids);
 
                     if ($exists) {
