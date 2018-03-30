@@ -57,7 +57,7 @@ class LabelPreProcessingDocumentImporter implements DocumentImporterInterface
         // By using this approach the correct visible/invisible label state
         // is taken into account and the JSON document is correct.
 
-        // 1.
+        //  1. get all UDB3 labels from label relation (hidden and visible)
         /** @var LabelRelation[] $udb3LabelRelations */
         $udb3LabelRelations = array_filter(
             $this->labelRelationsRepository->getLabelRelationsForItem(
@@ -74,7 +74,7 @@ class LabelPreProcessingDocumentImporter implements DocumentImporterInterface
             $udb3LabelRelations
         );
 
-        // 2.
+        //  2. remove all UDB3 labels from document (both hidden and visible)
         $data['labels'] = array_diff(
             $data['labels'],
             $udb3Labels
@@ -84,7 +84,7 @@ class LabelPreProcessingDocumentImporter implements DocumentImporterInterface
             $udb3Labels
         );
 
-        // 3.
+        //  3. add all UDB3 labels to document (both hidden and visible)
         foreach ($udb3LabelRelations as $udb3LabelRelation) {
             // @todo: what if inside label relations but not inside label repo?
             $label = $this->labelsRepository->getByName($udb3LabelRelation->getLabelName());
