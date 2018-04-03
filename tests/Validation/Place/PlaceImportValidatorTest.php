@@ -1,25 +1,19 @@
 <?php
 
-namespace CultuurNet\UDB3\Model\Import\Validation\Organizer;
+namespace CultuurNet\UDB3\Model\Import\Validation\Place;
 
 use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as LabelsRepository;
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\ReadRepositoryInterface as LabelRelationsRepository;
-use CultuurNet\UDB3\Model\Validation\Organizer\OrganizerValidator;
+use CultuurNet\UDB3\Model\Validation\Place\PlaceValidator;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUIDParser;
-use CultuurNet\UDB3\Organizer\WebsiteLookupServiceInterface;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 
-class OrganizerDocumentValidatorTest extends \PHPUnit_Framework_TestCase
+class PlaceImportValidatorTest extends \PHPUnit_Framework_TestCase
 {
     /**
      * @var UUIDParser
      */
     private $uuidParser;
-
-    /**
-     * @var WebsiteLookupServiceInterface|\PHPUnit_Framework_MockObject_MockObject
-     */
-    private $websiteLookupService;
 
     /**
      * @var UserIdentificationInterface|\PHPUnit_Framework_MockObject_MockObject
@@ -40,8 +34,6 @@ class OrganizerDocumentValidatorTest extends \PHPUnit_Framework_TestCase
     {
         $this->uuidParser = $this->createMock(UUIDParser::class);
 
-        $this->websiteLookupService = $this->createMock(WebsiteLookupServiceInterface::class);
-
         $this->userIdentification = $this->createMock(UserIdentificationInterface::class);
 
         $this->labelsRepository = $this->createMock(LabelsRepository::class);
@@ -52,17 +44,15 @@ class OrganizerDocumentValidatorTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      */
-    public function it_creates_organizer_validator_for_document()
+    public function it_creates_place_validator_for_document()
     {
-        $organizerDocumentValidator = new OrganizerDocumentValidator(
-            $this->websiteLookupService,
+        $placeDocumentValidator = new PlaceImportValidator(
             $this->uuidParser,
             $this->userIdentification,
             $this->labelsRepository,
-            $this->labelRelationsRepository,
-            true
+            $this->labelRelationsRepository
         );
 
-        $this->assertInstanceOf(OrganizerValidator::class, $organizerDocumentValidator);
+        $this->assertInstanceOf(PlaceValidator::class, $placeDocumentValidator);
     }
 }

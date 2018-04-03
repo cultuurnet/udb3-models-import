@@ -9,7 +9,7 @@ use CultuurNet\UDB3\Model\Validation\Event\EventValidator;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUIDParser;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 
-class EventDocumentValidatorTest extends \PHPUnit_Framework_TestCase
+class EventImportValidatorTest extends \PHPUnit_Framework_TestCase
 {
     /**
      * @var DocumentRepositoryInterface
@@ -54,7 +54,7 @@ class EventDocumentValidatorTest extends \PHPUnit_Framework_TestCase
      */
     public function it_creates_place_validator_for_document()
     {
-        $eventDocumentValidator = new EventDocumentValidator(
+        $eventDocumentValidator = new EventImportValidator(
             $this->placeRepository,
             $this->uuidParser,
             $this->userIdentification,

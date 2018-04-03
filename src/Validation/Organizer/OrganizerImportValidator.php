@@ -11,7 +11,7 @@ use CultuurNet\UDB3\Model\ValueObject\Identity\UUIDParser;
 use CultuurNet\UDB3\Organizer\WebsiteLookupServiceInterface;
 use CultuurNet\UDB3\Security\UserIdentificationInterface;
 
-class OrganizerDocumentValidator extends OrganizerValidator
+class OrganizerImportValidator extends OrganizerValidator
 {
     /**
      * @param WebsiteLookupServiceInterface $websiteLookupService
