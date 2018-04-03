@@ -23,22 +23,13 @@ use CultuurNet\UDB3\Event\Commands\UpdateTitle;
 use CultuurNet\UDB3\Event\Commands\UpdateType;
 use CultuurNet\UDB3\Event\Commands\UpdateTypicalAgeRange;
 use CultuurNet\UDB3\Event\ValueObjects\Audience;
-use CultuurNet\UDB3\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\LocationId;
-use CultuurNet\UDB3\Media\Image;
-use CultuurNet\UDB3\Media\ImageCollection;
-use CultuurNet\UDB3\Media\MediaManagerInterface;
-use CultuurNet\UDB3\Media\Properties\CopyrightHolder;
-use CultuurNet\UDB3\Media\Properties\Description;
-use CultuurNet\UDB3\MediaObject;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
-use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReference;
-use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectType;
+use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
-use ValueObjects\Identity\UUID;
 
 class EventDocumentImporter implements DocumentImporterInterface
 {

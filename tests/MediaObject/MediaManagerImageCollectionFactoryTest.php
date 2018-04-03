@@ -1,6 +1,6 @@
 <?php
 
-namespace CultuurNet\UDB3\Import\MediaObject;
+namespace CultuurNet\UDB3\Model\Import\MediaObject;
 
 use CultuurNet\UDB3\Language as Udb3Language;
 use CultuurNet\UDB3\Media\Image;

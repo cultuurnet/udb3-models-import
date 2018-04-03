@@ -1,11 +1,10 @@
 <?php
 
-namespace CultuurNet\UDB3\Model\Validation\ValueObject\MediaObject;
+namespace CultuurNet\UDB3\Model\Import\Validation\MediaObject;
 
 use CultuurNet\UDB3\Media\MediaManagerInterface;
 use CultuurNet\UDB3\Media\MediaObjectNotFoundException;
 use CultuurNet\UDB3\MediaObject;
-use CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Category\MediaObjectsExistValidator;
 use PHPUnit\Framework\TestCase;
 use Respect\Validation\Exceptions\GroupedValidationException;
 

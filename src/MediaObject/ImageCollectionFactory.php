@@ -1,6 +1,6 @@
 <?php
 
-namespace CultuurNet\UDB3\Import\MediaObject;
+namespace CultuurNet\UDB3\Model\Import\MediaObject;
 
 use CultuurNet\UDB3\Media\ImageCollection;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReferences;

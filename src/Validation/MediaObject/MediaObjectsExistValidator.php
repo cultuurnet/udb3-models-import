@@ -1,9 +1,8 @@
 <?php
 
-namespace CultuurNet\UDB3\Model\Import\Validation\Taxonomy\Category;
+namespace CultuurNet\UDB3\Model\Import\Validation\MediaObject;
 
 use CultuurNet\UDB3\Media\MediaManagerInterface;
-use CultuurNet\UDB3\Model\Import\Validation\ValueObject\MediaObject\MediaObjectExistsValidator;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUIDParser;
 use Respect\Validation\Rules\AlwaysValid;
 use Respect\Validation\Rules\ArrayType;

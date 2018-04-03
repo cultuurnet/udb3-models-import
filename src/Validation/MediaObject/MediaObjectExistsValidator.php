@@ -1,6 +1,6 @@
 <?php
 
-namespace CultuurNet\UDB3\Model\Import\Validation\ValueObject\MediaObject;
+namespace CultuurNet\UDB3\Model\Import\Validation\MediaObject;
 
 use CultuurNet\UDB3\Media\MediaManagerInterface;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUIDParser;
