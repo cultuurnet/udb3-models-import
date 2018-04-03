@@ -138,10 +138,6 @@ class DocumentLabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
 
         $userId = new StringLiteral('user_id');
 
-        $this->userIdentification->expects($this->exactly(4))
-            ->method('isGodUser')
-            ->willReturn(false);
-
         $this->labelRelationsRepository->expects($this->exactly(4))
             ->method('getLabelRelationsForItem')
             ->with(new StringLiteral('c33b4498-0932-4fbe-816f-c6641f30ba3b'))

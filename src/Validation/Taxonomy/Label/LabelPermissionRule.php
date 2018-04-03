@@ -58,11 +58,6 @@ class LabelPermissionRule extends AbstractRule
     {
         $this->setName($input);
 
-        // A god user can use every label.
-        if ($this->userIdentification->isGodUser()) {
-            return true;
-        }
-
         // If the label is already present on the item no permission check is needed.
         $labelRelations = $this->labelRelationsRepository->getLabelRelationsForItem(
             new StringLiteral($this->documentId->toString())

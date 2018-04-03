@@ -59,29 +59,8 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      */
-    public function a_god_user_can_use_all_labels()
-    {
-        $this->userIdentification->expects($this->once())
-            ->method('isGodUser')
-            ->willReturn(true);
-
-        $this->labelsRepository->expects($this->never())
-            ->method('canUseLabel');
-
-        $this->assertTrue(
-            $this->labelPermissionRule->validate('foo')
-        );
-    }
-
-    /**
-     * @test
-     */
     public function it_does_not_delegates_validation_to_label_repository_for_existing_labels_and_non_god_user()
     {
-        $this->userIdentification->expects($this->once())
-            ->method('isGodUser')
-            ->willReturn(false);
-
         $this->labelRelationsRepository->expects($this->once())
             ->method('getLabelRelationsForItem')
             ->with(new StringLiteral($this->documentId->toString()))
@@ -118,10 +97,6 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
     {
         $userId = new StringLiteral('user_id');
 
-        $this->userIdentification->expects($this->once())
-            ->method('isGodUser')
-            ->willReturn(false);
-
         $this->labelRelationsRepository->expects($this->once())
             ->method('getLabelRelationsForItem')
             ->with(new StringLiteral($this->documentId->toString()))
@@ -154,10 +129,6 @@ class LabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
     public function it_creates_label_permission_rule_exception_on_assert()
     {
         $userId = new StringLiteral('user_id');
-
-        $this->userIdentification->expects($this->once())
-            ->method('isGodUser')
-            ->willReturn(false);
 
         $this->labelRelationsRepository->expects($this->once())
             ->method('getLabelRelationsForItem')
