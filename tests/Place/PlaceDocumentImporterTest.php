@@ -185,6 +185,7 @@ class PlaceDocumentImporterTest extends TestCase
                 ),
                 new Language('en')
             ),
+            new ImportLabels($id, new Labels()),
             new ImportImages($id, new ImageCollection()),
         ];
 
@@ -248,6 +249,7 @@ class PlaceDocumentImporterTest extends TestCase
                 ),
                 new Language('en')
             ),
+            new ImportLabels($id, new Labels()),
             new ImportImages($id, new ImageCollection()),
         ];
 

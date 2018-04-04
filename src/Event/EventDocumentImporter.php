@@ -173,9 +173,7 @@ class EventDocumentImporter implements DocumentImporterInterface
             $commands[] = new UpdateDescription($id, $language, $description);
         }
 
-        if ($import->getLabels()->count() > 0) {
-            $commands[] = new ImportLabels($id, $import->getLabels());
-        }
+        $commands[] = new ImportLabels($id, $import->getLabels());
 
         $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
         $commands[] = new ImportImages($id, $images);

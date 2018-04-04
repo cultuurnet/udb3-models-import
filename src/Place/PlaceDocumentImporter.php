@@ -172,9 +172,7 @@ class PlaceDocumentImporter implements DocumentImporterInterface
             $commands[] = new UpdateAddress($id, $address, $language);
         }
 
-        if ($import->getLabels()->count() > 0) {
-            $commands[] = new ImportLabels($id, $import->getLabels());
-        }
+        $commands[] = new ImportLabels($id, $import->getLabels());
 
         $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
         $commands[] = new ImportImages($id, $images);
