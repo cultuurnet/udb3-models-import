@@ -95,6 +95,7 @@ class OrganizerDocumentImporterTest extends TestCase
             new UpdateContactPoint($id, new ContactPoint()),
             new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
             new UpdateTitle($id, new Title('Example name'), new Language('en')),
+            new ImportLabels($id, new Labels()),
         ];
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
@@ -116,7 +117,14 @@ class OrganizerDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
+        $expectedCommands = [
+            new UpdateTitle($id, new Title('Voorbeeld naam'), new Language('nl')),
+            new UpdateWebsite($id, Url::fromNative('https://www.publiq.be')),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
+            new UpdateTitle($id, new Title('Example name'), new Language('en')),
+            new ImportLabels($id, new Labels()),
+        ];
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
@@ -137,20 +145,20 @@ class OrganizerDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
-        $expectedCommands[] = new ImportLabels(
-            $this->getOrganizerId(),
-            new Labels(
-                new Label(new LabelName('foo'), true),
-                new Label(new LabelName('bar'), true),
-                new Label(new LabelName('lorem'), false),
-                new Label(new LabelName('ipsum'), false)
-            )
-        );
-
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
-        $this->assertEquals($expectedCommands, $recordedCommands);
+        $this->assertContainsObject(
+            new ImportLabels(
+                $this->getOrganizerId(),
+                new Labels(
+                    new Label(new LabelName('foo'), true),
+                    new Label(new LabelName('bar'), true),
+                    new Label(new LabelName('lorem'), false),
+                    new Label(new LabelName('ipsum'), false)
+                )
+            ),
+            $recordedCommands
+        );
     }
 
     /**
@@ -259,22 +267,6 @@ class OrganizerDocumentImporterTest extends TestCase
     private function getOrganizerDocumentWithLabels()
     {
         return new DecodedDocument($this->getOrganizerId(), $this->getOrganizerDataWithLabels());
-    }
-
-    /**
-     * @return array
-     */
-    private function getExpectedCommandsForRequiredFields()
-    {
-        $id = $this->getOrganizerId();
-
-        return [
-            new UpdateTitle($id, new Title('Voorbeeld naam'), new Language('nl')),
-            new UpdateWebsite($id, Url::fromNative('https://www.publiq.be')),
-            new UpdateContactPoint($id, new ContactPoint()),
-            new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
-            new UpdateTitle($id, new Title('Example name'), new Language('en')),
-        ];
     }
 
     /**

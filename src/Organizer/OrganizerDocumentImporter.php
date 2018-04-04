@@ -98,9 +98,7 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
             $commands[] = new UpdateTitle($id, $title, $language);
         }
 
-        if ($import->getLabels()->count() > 0) {
-            $commands[] = new ImportLabels($id, $import->getLabels());
-        }
+        $commands[] = new ImportLabels($id, $import->getLabels());
 
         foreach ($commands as $command) {
             $this->commandBus->dispatch($command);
