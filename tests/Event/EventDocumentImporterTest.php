@@ -18,6 +18,7 @@ use CultuurNet\UDB3\Event\Commands\CreateEvent;
 use CultuurNet\UDB3\Event\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Event\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Event\Commands\ImportImages;
+use CultuurNet\UDB3\Event\Commands\ImportLabels;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Event\Commands\UpdateAudience;
 use CultuurNet\UDB3\Event\Commands\UpdateBookingInfo;
@@ -55,6 +56,9 @@ use CultuurNet\UDB3\Model\ValueObject\Identity\UUID as Udb3ModelUUID;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\CopyrightHolder as Udb3ModelCopyrightHolder;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReference;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReferences;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
 use CultuurNet\UDB3\Model\ValueObject\Text\Description as Udb3ModelDescription;
 use CultuurNet\UDB3\Model\ValueObject\Translation\Language as Udb3ModelLanguage;
 use CultuurNet\UDB3\Offer\AgeRange;
@@ -210,6 +214,7 @@ class EventDocumentImporterTest extends TestCase
             new DeleteTypicalAgeRange($id),
             new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
             new UpdateTitle($id, new Language('en'), new Title('Example name')),
+            new ImportLabels($id, new Labels()),
             new ImportImages($id, new ImageCollection()),
         ];
 
@@ -260,6 +265,7 @@ class EventDocumentImporterTest extends TestCase
             new DeleteTypicalAgeRange($id),
             new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
             new UpdateTitle($id, new Language('en'), new Title('Example name')),
+            new ImportLabels($id, new Labels()),
             new ImportImages($id, new ImageCollection()),
         ];
 
@@ -472,6 +478,47 @@ class EventDocumentImporterTest extends TestCase
 
         $this->assertContainsObject(
             new ImportImages($id, $expectedImages),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_an_existing_event_with_labels()
+    {
+        $document = $this->getEventDocument();
+        $body = $document->getBody();
+        $body['labels'] = [
+            'foo',
+            'bar'
+        ];
+        $body['hiddenLabels'] = [
+            'lorem',
+            'ipsum'
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectEventIdExists($id);
+        $this->expectNoImages();
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new ImportLabels(
+                $this->getEventId(),
+                new Labels(
+                    new Label(new LabelName('foo'), true),
+                    new Label(new LabelName('bar'), true),
+                    new Label(new LabelName('lorem'), false),
+                    new Label(new LabelName('ipsum'), false)
+                )
+            ),
             $recordedCommands
         );
     }

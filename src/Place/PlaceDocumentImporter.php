@@ -7,6 +7,7 @@ use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Place\Commands\CreatePlace;
+use CultuurNet\UDB3\Place\Commands\ImportLabels;
 use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Place\Commands\ImportImages;
@@ -170,6 +171,8 @@ class PlaceDocumentImporter implements DocumentImporterInterface
             $language = new Language($language);
             $commands[] = new UpdateAddress($id, $address, $language);
         }
+
+        $commands[] = new ImportLabels($id, $import->getLabels());
 
         $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
         $commands[] = new ImportImages($id, $images);

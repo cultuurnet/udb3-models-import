@@ -5,6 +5,10 @@ namespace CultuurNet\UDB3\Model\Import\Organizer;
 use Broadway\CommandHandling\Testing\TraceableCommandBus;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
+use CultuurNet\UDB3\Organizer\Commands\ImportLabels;
 use CultuurNet\UDB3\Address\Address;
 use CultuurNet\UDB3\Address\Locality;
 use CultuurNet\UDB3\Address\PostalCode;
@@ -112,13 +116,37 @@ class OrganizerDocumentImporterTest extends TestCase
 
         $this->importer->import($document);
 
-        $expectedCommands = [
-            new UpdateTitle($id, new Title('Voorbeeld naam'), new Language('nl')),
-            new UpdateWebsite($id, Url::fromNative('https://www.publiq.be')),
-            new UpdateContactPoint($id, new ContactPoint()),
-            new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
-            new UpdateTitle($id, new Title('Example name'), new Language('en')),
-        ];
+        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertEquals($expectedCommands, $recordedCommands);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_an_existing_organizer_with_labels()
+    {
+        $document = $this->getOrganizerDocumentWithLabels();
+        $id = $document->getId();
+
+        $this->expectOrganizerExists($id);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
+        $expectedCommands[] = new ImportLabels(
+            $this->getOrganizerId(),
+            new Labels(
+                new Label(new LabelName('foo'), true),
+                new Label(new LabelName('bar'), true),
+                new Label(new LabelName('lorem'), false),
+                new Label(new LabelName('ipsum'), false)
+            )
+        );
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
@@ -197,11 +225,56 @@ class OrganizerDocumentImporterTest extends TestCase
     }
 
     /**
+     * @return array
+     */
+    private function getOrganizerDataWithLabels()
+    {
+        return $this->getOrganizerData() +
+            [
+                'labels' => [
+                    'foo',
+                    'bar',
+                ]
+            ]
+            +
+            [
+                'hiddenLabels' => [
+                    'lorem',
+                    'ipsum',
+                ]
+            ];
+    }
+
+    /**
      * @return DecodedDocument
      */
     private function getOrganizerDocument()
     {
         return new DecodedDocument($this->getOrganizerId(), $this->getOrganizerData());
+    }
+
+    /**
+     * @return DecodedDocument
+     */
+    private function getOrganizerDocumentWithLabels()
+    {
+        return new DecodedDocument($this->getOrganizerId(), $this->getOrganizerDataWithLabels());
+    }
+
+    /**
+     * @return array
+     */
+    private function getExpectedCommandsForRequiredFields()
+    {
+        $id = $this->getOrganizerId();
+
+        return [
+            new UpdateTitle($id, new Title('Voorbeeld naam'), new Language('nl')),
+            new UpdateWebsite($id, Url::fromNative('https://www.publiq.be')),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
+            new UpdateTitle($id, new Title('Example name'), new Language('en')),
+        ];
     }
 
     /**

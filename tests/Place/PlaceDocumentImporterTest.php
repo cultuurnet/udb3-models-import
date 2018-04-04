@@ -24,12 +24,16 @@ use CultuurNet\UDB3\Model\ValueObject\Identity\UUID as Udb3ModelUUID;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\CopyrightHolder as Udb3ModelCopyrightHolder;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReference;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReferences;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
 use CultuurNet\UDB3\Model\ValueObject\Text\Description as Udb3ModelDescription;
 use CultuurNet\UDB3\Model\ValueObject\Translation\Language as Udb3ModelLanguage;
 use CultuurNet\UDB3\Offer\AgeRange;
 use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Place\Commands\ImportImages;
+use CultuurNet\UDB3\Place\Commands\ImportLabels;
 use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
@@ -181,6 +185,7 @@ class PlaceDocumentImporterTest extends TestCase
                 ),
                 new Language('en')
             ),
+            new ImportLabels($id, new Labels()),
             new ImportImages($id, new ImageCollection()),
         ];
 
@@ -244,6 +249,7 @@ class PlaceDocumentImporterTest extends TestCase
                 ),
                 new Language('en')
             ),
+            new ImportLabels($id, new Labels()),
             new ImportImages($id, new ImageCollection()),
         ];
 
@@ -456,6 +462,47 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->assertContainsObject(
             new ImportImages($id, $expectedImages),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_an_existing_place_with_labels()
+    {
+        $document = $this->getPlaceDocument();
+        $body = $document->getBody();
+        $body['labels'] = [
+            'foo',
+            'bar',
+        ];
+        $body['hiddenLabels'] = [
+            'lorem',
+            'ipsum',
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectPlaceExists($id);
+        $this->expectNoImages();
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new ImportLabels(
+                $this->getPlaceId(),
+                new Labels(
+                    new Label(new LabelName('foo'), true),
+                    new Label(new LabelName('bar'), true),
+                    new Label(new LabelName('lorem'), false),
+                    new Label(new LabelName('ipsum'), false)
+                )
+            ),
             $recordedCommands
         );
     }

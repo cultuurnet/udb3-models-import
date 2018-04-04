@@ -10,6 +10,7 @@ use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Organizer\Organizer;
 use CultuurNet\UDB3\Organizer\Commands\CreateOrganizer;
+use CultuurNet\UDB3\Organizer\Commands\ImportLabels;
 use CultuurNet\UDB3\Organizer\Commands\UpdateAddress;
 use CultuurNet\UDB3\Organizer\Commands\UpdateContactPoint;
 use CultuurNet\UDB3\Organizer\Commands\UpdateTitle;
@@ -95,6 +96,10 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
         foreach ($adapter->getTitleTranslations() as $language => $title) {
             $language = new Language($language);
             $commands[] = new UpdateTitle($id, $title, $language);
+        }
+
+        if ($import->getLabels()->count() > 0) {
+            $commands[] = new ImportLabels($id, $import->getLabels());
         }
 
         foreach ($commands as $command) {

@@ -6,6 +6,7 @@ use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
+use CultuurNet\UDB3\Event\Commands\ImportLabels;
 use CultuurNet\UDB3\Event\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Event\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Event\Commands\ImportImages;
@@ -171,6 +172,8 @@ class EventDocumentImporter implements DocumentImporterInterface
             $language = new Language($language);
             $commands[] = new UpdateDescription($id, $language, $description);
         }
+
+        $commands[] = new ImportLabels($id, $import->getLabels());
 
         $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
         $commands[] = new ImportImages($id, $images);
