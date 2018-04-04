@@ -9,6 +9,7 @@ use CultuurNet\UDB3\Event\Commands\CreateEvent;
 use CultuurNet\UDB3\Event\Commands\ImportLabels;
 use CultuurNet\UDB3\Event\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Event\Commands\DeleteTypicalAgeRange;
+use CultuurNet\UDB3\Event\Commands\ImportImages;
 use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Event\Commands\UpdateAudience;
 use CultuurNet\UDB3\Event\Commands\UpdateBookingInfo;
@@ -28,6 +29,7 @@ use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
+use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
 class EventDocumentImporter implements DocumentImporterInterface
@@ -43,6 +45,11 @@ class EventDocumentImporter implements DocumentImporterInterface
     private $eventDenormalizer;
 
     /**
+     * @var ImageCollectionFactory
+     */
+    private $imageCollectionFactory;
+
+    /**
      * @var CommandBusInterface
      */
     private $commandBus;
@@ -50,10 +57,12 @@ class EventDocumentImporter implements DocumentImporterInterface
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $eventDenormalizer,
+        ImageCollectionFactory $imageCollectionFactory,
         CommandBusInterface $commandBus
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->eventDenormalizer = $eventDenormalizer;
+        $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
     }
 
@@ -167,6 +176,9 @@ class EventDocumentImporter implements DocumentImporterInterface
         if ($import->getLabels()->count() > 0) {
             $commands[] = new ImportLabels($id, $import->getLabels());
         }
+
+        $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
+        $commands[] = new ImportImages($id, $images);
 
         foreach ($commands as $command) {
             $this->commandBus->dispatch($command);

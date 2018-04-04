@@ -12,15 +12,28 @@ use CultuurNet\UDB3\Address\Street;
 use CultuurNet\UDB3\BookingInfo;
 use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\CalendarType;
+use CultuurNet\UDB3\ContactPoint;
+use CultuurNet\UDB3\Description;
+use CultuurNet\UDB3\Media\Image;
+use CultuurNet\UDB3\Media\ImageCollection;
+use CultuurNet\UDB3\Media\Properties\CopyrightHolder;
+use CultuurNet\UDB3\Media\Properties\Description as ImageDescription;
+use CultuurNet\UDB3\Media\Properties\MIMEType;
+use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
+use CultuurNet\UDB3\Model\ValueObject\Identity\UUID as Udb3ModelUUID;
+use CultuurNet\UDB3\Model\ValueObject\MediaObject\CopyrightHolder as Udb3ModelCopyrightHolder;
+use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReference;
+use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReferences;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
-use CultuurNet\UDB3\Place\Commands\ImportLabels;
-use CultuurNet\UDB3\ContactPoint;
-use CultuurNet\UDB3\Description;
+use CultuurNet\UDB3\Model\ValueObject\Text\Description as Udb3ModelDescription;
+use CultuurNet\UDB3\Model\ValueObject\Translation\Language as Udb3ModelLanguage;
 use CultuurNet\UDB3\Offer\AgeRange;
 use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
+use CultuurNet\UDB3\Place\Commands\ImportImages;
+use CultuurNet\UDB3\Place\Commands\ImportLabels;
 use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
@@ -47,8 +60,10 @@ use CultuurNet\UDB3\Title;
 use PHPUnit\Framework\TestCase;
 use ValueObjects\Geography\Country;
 use ValueObjects\Geography\CountryCode;
+use ValueObjects\Identity\UUID;
 use ValueObjects\Money\Currency;
 use ValueObjects\Person\Age;
+use ValueObjects\Web\Url;
 
 class PlaceDocumentImporterTest extends TestCase
 {
@@ -61,6 +76,11 @@ class PlaceDocumentImporterTest extends TestCase
      * @var PlaceDenormalizer
      */
     private $denormalizer;
+
+    /**
+     * @var ImageCollectionFactory|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $imageCollectionFactory;
 
     /**
      * @var TraceableCommandBus
@@ -86,11 +106,13 @@ class PlaceDocumentImporterTest extends TestCase
     {
         $this->repository = $this->createMock(RepositoryInterface::class);
         $this->denormalizer = new PlaceDenormalizer();
+        $this->imageCollectionFactory = $this->createMock(ImageCollectionFactory::class);
         $this->commandBus = new TraceableCommandBus();
 
         $this->placeDocumentImporter = new PlaceDocumentImporter(
             $this->repository,
             $this->denormalizer,
+            $this->imageCollectionFactory,
             $this->commandBus
         );
 
@@ -111,6 +133,7 @@ class PlaceDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectPlaceDoesNotExist($id);
+        $this->expectNoImages();
 
         $this->commandBus->record();
 
@@ -162,6 +185,7 @@ class PlaceDocumentImporterTest extends TestCase
                 ),
                 new Language('en')
             ),
+            new ImportImages($id, new ImageCollection()),
         ];
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
@@ -178,42 +202,54 @@ class PlaceDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectPlaceExists($id);
+        $this->expectNoImages();
 
         $this->commandBus->record();
 
         $this->importer->import($document);
 
-        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
-
-        $recordedCommands = $this->commandBus->getRecordedCommands();
-
-        $this->assertEquals($expectedCommands, $recordedCommands);
-    }
-
-    /**
-     * @test
-     */
-    public function it_should_update_an_existing_place_with_labels()
-    {
-        $document = $this->getPlaceDocumentWithLabels();
-        $id = $document->getId();
-
-        $this->expectPlaceExists($id);
-
-        $this->commandBus->record();
-
-        $this->importer->import($document);
-
-        $expectedCommands = $this->getExpectedCommandsForRequiredFields();
-        $expectedCommands[] = new ImportLabels(
-            $this->getPlaceId(),
-            new Labels(
-                new Label(new LabelName('foo'), true),
-                new Label(new LabelName('bar'), true),
-                new Label(new LabelName('lorem'), false),
-                new Label(new LabelName('ipsum'), false)
-            )
-        );
+        $expectedCommands = [
+            new UpdateTitle($id, new Language('nl'), new Title('Voorbeeld naam')),
+            new UpdateType($id, new EventType('0.14.0.0.0', 'Monument')),
+            new UpdateAddress(
+                $id,
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussel'),
+                    new Country(CountryCode::fromNative('BE'))
+                ),
+                new Language('nl')
+            ),
+            new UpdateCalendar($id, new Calendar(CalendarType::PERMANENT())),
+            new UpdateBookingInfo($id, new BookingInfo()),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new DeleteCurrentOrganizer($id),
+            new DeleteTypicalAgeRange($id),
+            new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
+            new UpdateTitle($id, new Language('en'), new Title('Example name')),
+            new UpdateAddress(
+                $id,
+                new Address(
+                    new Street('Quai du Hainaut 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Bruxelles'),
+                    new Country(CountryCode::fromNative('BE'))
+                ),
+                new Language('fr')
+            ),
+            new UpdateAddress(
+                $id,
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussels'),
+                    new Country(CountryCode::fromNative('BE'))
+                ),
+                new Language('en')
+            ),
+            new ImportImages($id, new ImageCollection()),
+        ];
 
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
@@ -235,6 +271,7 @@ class PlaceDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectPlaceExists($id);
+        $this->expectNoImages();
 
         $this->commandBus->record();
 
@@ -267,6 +304,7 @@ class PlaceDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectPlaceExists($id);
+        $this->expectNoImages();
 
         $this->commandBus->record();
 
@@ -292,6 +330,7 @@ class PlaceDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectPlaceExists($id);
+        $this->expectNoImages();
 
         $this->commandBus->record();
 
@@ -324,6 +363,7 @@ class PlaceDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectPlaceExists($id);
+        $this->expectNoImages();
 
         $this->commandBus->record();
 
@@ -339,6 +379,126 @@ class PlaceDocumentImporterTest extends TestCase
                         new Price(1000),
                         Currency::fromNative('EUR')
                     )
+                )
+            ),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_import_media_object_references()
+    {
+        $document = $this->getPlaceDocument();
+        $body = $document->getBody();
+        $body['mediaObject'] = [
+            [
+                '@id' => 'https://io.uitdatabank.be/images/6984df33-62b4-4c94-ba2d-59d4a87d17dd.png',
+                'description' => 'Example description',
+                'copyrightHolder' => 'Bob',
+                'inLanguage' => 'en',
+            ],
+            [
+                '@id' => 'https://io.uitdatabank.be/images/ff29632f-c277-4e27-bb97-3fdb14e90279.png',
+                'description' => 'Voorbeeld beschrijving',
+                'copyrightHolder' => 'Bob',
+                'inLanguage' => 'nl',
+            ],
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectPlaceExists($id);
+
+        $expectedImages = ImageCollection::fromArray(
+            [
+                new Image(
+                    new UUID('6984df33-62b4-4c94-ba2d-59d4a87d17dd'),
+                    MIMEType::fromSubtype('png'),
+                    new ImageDescription('Example description'),
+                    new CopyrightHolder('Bob'),
+                    Url::fromNative('https://io.uitdatabank.be/images/6984df33-62b4-4c94-ba2d-59d4a87d17dd.png'),
+                    new Language('en')
+                ),
+                new Image(
+                    new UUID('ff29632f-c277-4e27-bb97-3fdb14e90279'),
+                    MIMEType::fromSubtype('png'),
+                    new ImageDescription('Voorbeeld beschrijving'),
+                    new CopyrightHolder('Bob'),
+                    Url::fromNative('https://io.uitdatabank.be/images/ff29632f-c277-4e27-bb97-3fdb14e90279.png'),
+                    new Language('nl')
+                ),
+            ]
+        );
+
+        $this->imageCollectionFactory->expects($this->once())
+            ->method('fromMediaObjectReferences')
+            ->with(
+                new MediaObjectReferences(
+                    MediaObjectReference::createWithMediaObjectId(
+                        new Udb3ModelUUID('6984df33-62b4-4c94-ba2d-59d4a87d17dd'),
+                        new Udb3ModelDescription('Example description'),
+                        new Udb3ModelCopyrightHolder('Bob'),
+                        new Udb3ModelLanguage('en')
+                    ),
+                    MediaObjectReference::createWithMediaObjectId(
+                        new Udb3ModelUUID('ff29632f-c277-4e27-bb97-3fdb14e90279'),
+                        new Udb3ModelDescription('Voorbeeld beschrijving'),
+                        new Udb3ModelCopyrightHolder('Bob'),
+                        new Udb3ModelLanguage('nl')
+                    )
+                )
+            )
+            ->willReturn($expectedImages);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new ImportImages($id, $expectedImages),
+            $recordedCommands
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_update_an_existing_place_with_labels()
+    {
+        $document = $this->getPlaceDocument();
+        $body = $document->getBody();
+        $body['labels'] = [
+            'foo',
+            'bar',
+        ];
+        $body['hiddenLabels'] = [
+            'lorem',
+            'ipsum',
+        ];
+        $document = $document->withBody($body);
+        $id = $document->getId();
+
+        $this->expectPlaceExists($id);
+        $this->expectNoImages();
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertContainsObject(
+            new ImportLabels(
+                $this->getPlaceId(),
+                new Labels(
+                    new Label(new LabelName('foo'), true),
+                    new Label(new LabelName('bar'), true),
+                    new Label(new LabelName('lorem'), false),
+                    new Label(new LabelName('ipsum'), false)
                 )
             ),
             $recordedCommands
@@ -399,90 +559,11 @@ class PlaceDocumentImporterTest extends TestCase
     }
 
     /**
-     * @return array
-     */
-    private function getPlaceDataWithLabels()
-    {
-        return $this->getPlaceData() +
-            [
-                'labels' => [
-                    'foo',
-                    'bar',
-                ]
-            ]
-            +
-            [
-                'hiddenLabels' => [
-                    'lorem',
-                    'ipsum',
-                ]
-            ];
-    }
-
-    /**
      * @return DecodedDocument
      */
     private function getPlaceDocument()
     {
         return new DecodedDocument($this->getPlaceId(), $this->getPlaceData());
-    }
-
-    /**
-     * @return DecodedDocument
-     */
-    private function getPlaceDocumentWithLabels()
-    {
-        return new DecodedDocument($this->getPlaceId(), $this->getPlaceDataWithLabels());
-    }
-
-    /**
-     * @return array
-     */
-    private function getExpectedCommandsForRequiredFields()
-    {
-        $id = $this->getPlaceId();
-
-        return [
-            new UpdateTitle($id, new Language('nl'), new Title('Voorbeeld naam')),
-            new UpdateType($id, new EventType('0.14.0.0.0', 'Monument')),
-            new UpdateAddress(
-                $id,
-                new Address(
-                    new Street('Henegouwenkaai 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Brussel'),
-                    new Country(CountryCode::fromNative('BE'))
-                ),
-                new Language('nl')
-            ),
-            new UpdateCalendar($id, new Calendar(CalendarType::PERMANENT())),
-            new UpdateBookingInfo($id, new BookingInfo()),
-            new UpdateContactPoint($id, new ContactPoint()),
-            new DeleteCurrentOrganizer($id),
-            new DeleteTypicalAgeRange($id),
-            new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
-            new UpdateTitle($id, new Language('en'), new Title('Example name')),
-            new UpdateAddress(
-                $id,
-                new Address(
-                    new Street('Quai du Hainaut 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Bruxelles'),
-                    new Country(CountryCode::fromNative('BE'))
-                ),
-                new Language('fr')
-            ),
-            new UpdateAddress(
-                $id,
-                new Address(
-                    new Street('Henegouwenkaai 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Brussels'),
-                    new Country(CountryCode::fromNative('BE'))
-                ),
-                new Language('en')
-            ),
-        ];
     }
 
     /**
@@ -502,6 +583,13 @@ class PlaceDocumentImporterTest extends TestCase
             ->method('load')
             ->with($placeId)
             ->willThrowException(new AggregateNotFoundException());
+    }
+
+    private function expectNoImages()
+    {
+        $this->imageCollectionFactory->expects($this->any())
+            ->method('fromMediaObjectReferences')
+            ->willReturn(new ImageCollection());
     }
 
     private function assertContainsObject($needle, array $haystack)
