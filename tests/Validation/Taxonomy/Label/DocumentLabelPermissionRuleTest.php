@@ -145,12 +145,13 @@ class DocumentLabelPermissionRuleTest extends \PHPUnit_Framework_TestCase
 
         $this->labelsRepository->expects($this->exactly(4))
             ->method('canUseLabel')
-            ->willReturnOnConsecutiveCalls([
-                true,
-                false,
-                true,
-                false
-            ]);
+            ->willReturnCallback(function (StringLiteral $userId, StringLiteral $name) {
+                if ($name->toNative() === 'foo' || $name->toNative() === 'lorem') {
+                    return true;
+                } else {
+                    return false;
+                }
+            });
 
         $this->userIdentification->expects($this->exactly(4))
             ->method('getId')

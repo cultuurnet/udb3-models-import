@@ -77,7 +77,7 @@ class DocumentLabelPermissionRule extends AbstractRule
         // Validate all visible labels
         $invalidVisibleLabels = [];
         if (isset($input['labels'])) {
-            $invalidVisibleLabels[] = $this->validateLabels(
+            $invalidVisibleLabels = $this->validateLabels(
                 $labelPermissionRule,
                 $input['labels']
             );
@@ -86,7 +86,7 @@ class DocumentLabelPermissionRule extends AbstractRule
         // Get all hidden labels
         $invalidHiddenLabels = [];
         if (isset($input['hiddenLabels'])) {
-            $invalidHiddenLabels[] = $this->validateLabels(
+            $invalidHiddenLabels = $this->validateLabels(
                 $labelPermissionRule,
                 $input['hiddenLabels']
             );
@@ -116,7 +116,7 @@ class DocumentLabelPermissionRule extends AbstractRule
 
         foreach ($labels as $label) {
             if (!$labelPermissionRule->validate($label)) {
-                $invalidLabels = $label;
+                $invalidLabels[] = $label;
             }
         }
 
