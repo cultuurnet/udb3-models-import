@@ -362,8 +362,8 @@ class Udb3ModelToLegacyOfferAdapterTest extends TestCase
             'Publiq',
             '044/444444',
             'info@publiq.be',
-            '2018-01-01T10:00:00+01:00',
-            '2018-01-10T10:00:00+01:00'
+            new \DateTimeImmutable('2018-01-01T10:00:00+01:00'),
+            new \DateTimeImmutable('2018-01-10T10:00:00+01:00')
         );
         $actual = $this->completeAdapter->getBookingInfo();
         $this->assertEquals($expected, $actual);
