@@ -207,4 +207,35 @@ class LabelPreProcessingDocumentImporterTest extends \PHPUnit_Framework_TestCase
 
         $this->labelPreProcessingDocumentImporter->import($decodedDocument);
     }
+
+    /**
+     * @test
+     */
+    public function it_does_not_add_empty_label_arrays()
+    {
+        $decodedDocument = new DecodedDocument(
+            '9f34efc7-a528-4ea8-a53e-a183f21abbab',
+            [
+                '@id' => 'https://io.uitdatabank.be/event/9f34efc7-a528-4ea8-a53e-a183f21abbab',
+            ]
+        );
+
+        $expectedDecodedDocument = new DecodedDocument(
+            '9f34efc7-a528-4ea8-a53e-a183f21abbab',
+            [
+                '@id' => 'https://io.uitdatabank.be/event/9f34efc7-a528-4ea8-a53e-a183f21abbab',
+            ]
+        );
+
+        $this->labelRelationsRepository->expects($this->once())
+            ->method('getLabelRelationsForItem')
+            ->with(new StringLiteral('9f34efc7-a528-4ea8-a53e-a183f21abbab'))
+            ->willReturn([]);
+
+        $this->importer->expects($this->once())
+            ->method('import')
+            ->with($expectedDecodedDocument);
+
+        $this->labelPreProcessingDocumentImporter->import($decodedDocument);
+    }
 }

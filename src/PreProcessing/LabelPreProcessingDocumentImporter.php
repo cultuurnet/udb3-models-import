@@ -75,12 +75,13 @@ class LabelPreProcessingDocumentImporter implements DocumentImporterInterface
         );
 
         //  2. remove all UDB3 labels from document (both hidden and visible)
+        //  Also take into account missing label array be setting it to an empty array.
         $data['labels'] = array_diff(
-            $data['labels'],
+            isset($data['labels']) ? $data['labels'] : [],
             $udb3Labels
         );
         $data['hiddenLabels'] = array_diff(
-            $data['hiddenLabels'],
+            isset($data['hiddenLabels']) ? $data['hiddenLabels'] : [],
             $udb3Labels
         );
 
@@ -99,6 +100,13 @@ class LabelPreProcessingDocumentImporter implements DocumentImporterInterface
 
         $data['labels'] = array_values($data['labels']);
         $data['hiddenLabels'] = array_values($data['hiddenLabels']);
+
+        if (empty($data['labels'])) {
+            unset($data['labels']);
+        }
+        if (empty($data['hiddenLabels'])) {
+            unset($data['hiddenLabels']);
+        }
 
         $decodedDocument = $decodedDocument->withBody($data);
         $this->jsonImporter->import($decodedDocument);
