@@ -9,12 +9,12 @@ use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Organizer\Organizer;
-use CultuurNet\UDB3\Organizer\Commands\CreateOrganizer;
 use CultuurNet\UDB3\Organizer\Commands\ImportLabels;
 use CultuurNet\UDB3\Organizer\Commands\UpdateAddress;
 use CultuurNet\UDB3\Organizer\Commands\UpdateContactPoint;
 use CultuurNet\UDB3\Organizer\Commands\UpdateTitle;
 use CultuurNet\UDB3\Organizer\Commands\UpdateWebsite;
+use CultuurNet\UDB3\Organizer\Organizer as OrganizerAggregate;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
 class OrganizerDocumentImporter implements DocumentImporterInterface
@@ -69,12 +69,13 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
 
         $commands = [];
         if (!$exists) {
-            $commands[] = new CreateOrganizer(
+            $organizer = OrganizerAggregate::create(
                 $id,
                 $mainLanguage,
                 $url,
                 $title
             );
+            $this->aggregateRepository->save($organizer);
         } else {
             $commands[] = new UpdateTitle(
                 $id,

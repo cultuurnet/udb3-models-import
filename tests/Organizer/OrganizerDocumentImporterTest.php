@@ -80,18 +80,20 @@ class OrganizerDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectOrganizerDoesNotExist($id);
+        $this->expectCreateOrganizer(
+            Organizer::create(
+                $id,
+                new Language('nl'),
+                Url::fromNative('https://www.publiq.be'),
+                new Title('Voorbeeld naam')
+            )
+        );
 
         $this->commandBus->record();
 
         $this->importer->import($document);
 
         $expectedCommands = [
-            new CreateOrganizer(
-                $id,
-                new Language('nl'),
-                Url::fromNative('https://www.publiq.be'),
-                new Title('Voorbeeld naam')
-            ),
             new UpdateContactPoint($id, new ContactPoint()),
             new UpdateTitle($id, new Title('Nom example'), new Language('fr')),
             new UpdateTitle($id, new Title('Example name'), new Language('en')),
@@ -286,6 +288,15 @@ class OrganizerDocumentImporterTest extends TestCase
             ->method('load')
             ->with($organizerId)
             ->willThrowException(new AggregateNotFoundException());
+    }
+
+    private function expectCreateOrganizer(Organizer $expectedOrganizer)
+    {
+        $this->repository->expects($this->once())
+            ->method('save')
+            ->with($this->callback(function (Organizer $organizer) use ($expectedOrganizer) {
+                return $expectedOrganizer->getAggregateRootId() === $organizer->getAggregateRootId();
+            }));
     }
 
     private function assertContainsObject($needle, array $haystack)
