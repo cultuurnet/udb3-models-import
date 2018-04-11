@@ -167,13 +167,8 @@ class EventDocumentImporterTest extends TestCase
 
         $this->expectEventDoesNotExist($id);
         $this->expectNoImages();
-
-        $this->commandBus->record();
-
-        $this->importer->import($document);
-
-        $expectedCommands = [
-            new CreateEvent(
+        $this->expectCreateEvent(
+            Event::create(
                 $id,
                 new Language('nl'),
                 new Title('Voorbeeld naam'),
@@ -202,7 +197,14 @@ class EventDocumentImporterTest extends TestCase
                 ),
                 new Theme('1.17.0.0.0', 'Antiek en brocante'),
                 \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
-            ),
+            )
+        );
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $expectedCommands = [
             new Publish(
                 $id,
                 \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
@@ -632,6 +634,15 @@ class EventDocumentImporterTest extends TestCase
             ->method('load')
             ->with($eventId)
             ->willThrowException(new AggregateNotFoundException());
+    }
+
+    private function expectCreateEvent(Event $expectedEvent)
+    {
+        $this->repository->expects($this->once())
+            ->method('save')
+            ->with($this->callback(function (Event $event) use ($expectedEvent) {
+                return $expectedEvent->getAggregateRootId() === $event->getAggregateRootId();
+            }));
     }
 
     private function expectNoImages()
