@@ -2,6 +2,7 @@
 
 namespace CultuurNet\UDB3\Model\Import\PreProcessing;
 
+use CultuurNet\UDB3\Label\LabelServiceInterface;
 use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\Entity;
 use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as LabelRepository;
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\LabelRelation;
@@ -33,6 +34,11 @@ class LabelPreProcessingDocumentImporterTest extends \PHPUnit_Framework_TestCase
     private $labelRelationsRepository;
 
     /**
+     * @var LabelServiceInterface|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $labelService;
+
+    /**
      * @var LabelPreProcessingDocumentImporter
      */
     private $labelPreProcessingDocumentImporter;
@@ -42,11 +48,13 @@ class LabelPreProcessingDocumentImporterTest extends \PHPUnit_Framework_TestCase
         $this->importer = $this->createMock(DocumentImporterInterface::class);
         $this->labelsRepository = $this->createMock(LabelRepository::class);
         $this->labelRelationsRepository = $this->createMock(LabelRelationsRepository::class);
+        $this->labelService = $this->createMock(LabelServiceInterface::class);
 
         $this->labelPreProcessingDocumentImporter = new LabelPreProcessingDocumentImporter(
             $this->importer,
             $this->labelsRepository,
-            $this->labelRelationsRepository
+            $this->labelRelationsRepository,
+            $this->labelService
         );
     }
 
@@ -181,6 +189,19 @@ class LabelPreProcessingDocumentImporterTest extends \PHPUnit_Framework_TestCase
 
                 return null;
             });
+
+        $this->labelService->expects($this->exactly(2))
+            ->method('createLabelAggregateIfNew')
+            ->withConsecutive(
+                [
+                    new LabelName('imported_new_visible_label'),
+                    true,
+                ],
+                [
+                    new LabelName('imported_new_hidden_label'),
+                    false,
+                ]
+            );
 
         $expectedDecodedDocument = new DecodedDocument(
             '9f34efc7-a528-4ea8-a53e-a183f21abbab',
