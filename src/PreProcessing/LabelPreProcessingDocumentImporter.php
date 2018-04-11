@@ -101,10 +101,10 @@ class LabelPreProcessingDocumentImporter implements DocumentImporterInterface
         $data['labels'] = array_values($data['labels']);
         $data['hiddenLabels'] = array_values($data['hiddenLabels']);
 
-        if (count($data['labels']) <= 0) {
+        if (empty($data['labels'])) {
             unset($data['labels']);
         }
-        if (count($data['hiddenLabels']) <= 0) {
+        if (empty($data['hiddenLabels'])) {
             unset($data['hiddenLabels']);
         }
 
