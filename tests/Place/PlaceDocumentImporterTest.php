@@ -51,7 +51,6 @@ use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\PreProcessing\TermPreProcessingDocumentImporter;
 use CultuurNet\UDB3\Model\Serializer\Place\PlaceDenormalizer;
-use CultuurNet\UDB3\Place\Commands\CreatePlace;
 use CultuurNet\UDB3\Place\Commands\UpdateAddress;
 use CultuurNet\UDB3\PriceInfo\BasePrice;
 use CultuurNet\UDB3\PriceInfo\Price;
@@ -133,14 +132,8 @@ class PlaceDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectPlaceDoesNotExist($id);
-        $this->expectNoImages();
-
-        $this->commandBus->record();
-
-        $this->importer->import($document);
-
-        $expectedCommands = [
-            new CreatePlace(
+        $this->expectCreatePlace(
+            Place::createPlace(
                 $id,
                 new Language('nl'),
                 new Title('Voorbeeld naam'),
@@ -154,7 +147,15 @@ class PlaceDocumentImporterTest extends TestCase
                 new Calendar(CalendarType::PERMANENT()),
                 null,
                 \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
-            ),
+            )
+        );
+        $this->expectNoImages();
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $expectedCommands = [
             new Publish(
                 $id,
                 \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
@@ -585,6 +586,15 @@ class PlaceDocumentImporterTest extends TestCase
             ->method('load')
             ->with($placeId)
             ->willThrowException(new AggregateNotFoundException());
+    }
+
+    private function expectCreatePlace(Place $expectedPlace)
+    {
+        $this->repository->expects($this->once())
+            ->method('save')
+            ->with($this->callback(function (Place $place) use ($expectedPlace) {
+                return $expectedPlace->getAggregateRootId() === $place->getAggregateRootId();
+            }));
     }
 
     private function expectNoImages()

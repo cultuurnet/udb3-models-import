@@ -23,6 +23,7 @@ use CultuurNet\UDB3\Event\Commands\UpdateTheme;
 use CultuurNet\UDB3\Event\Commands\UpdateTitle;
 use CultuurNet\UDB3\Event\Commands\UpdateType;
 use CultuurNet\UDB3\Event\Commands\UpdateTypicalAgeRange;
+use CultuurNet\UDB3\Event\Event as EventAggregate;
 use CultuurNet\UDB3\Event\ValueObjects\Audience;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\LocationId;
@@ -95,7 +96,7 @@ class EventDocumentImporter implements DocumentImporterInterface
 
         $commands = [];
         if (!$exists) {
-            $commands[] = new CreateEvent(
+            $event = EventAggregate::create(
                 $id,
                 $mainLanguage,
                 $title,
@@ -105,6 +106,7 @@ class EventDocumentImporter implements DocumentImporterInterface
                 $theme,
                 $publishDate
             );
+            $this->aggregateRepository->save($event);
 
             // New events created via the import API should always be set to
             // ready_for_validation.
