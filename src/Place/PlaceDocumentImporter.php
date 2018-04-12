@@ -7,13 +7,13 @@ use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
+use CultuurNet\UDB3\Model\Import\ConsumerAwareDocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Model\Place\Place;
 use CultuurNet\UDB3\Place\Commands\ImportLabels;
 use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Place\Commands\ImportImages;
-use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateAddress;
 use CultuurNet\UDB3\Place\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
@@ -26,12 +26,11 @@ use CultuurNet\UDB3\Place\Commands\UpdateTitle;
 use CultuurNet\UDB3\Place\Commands\UpdateType;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
-use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Place\Commands\UpdateTypicalAgeRange;
 use CultuurNet\UDB3\Place\Place as PlaceAggregate;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
-class PlaceDocumentImporter implements DocumentImporterInterface
+class PlaceDocumentImporter implements ConsumerAwareDocumentImporterInterface
 {
     /**
      * @var RepositoryInterface
@@ -54,29 +53,39 @@ class PlaceDocumentImporter implements DocumentImporterInterface
     private $commandBus;
 
     /**
-     * @var ConsumerInterface
-     */
-    private $apiConsumer;
-
-    /**
      * @var ConsumerSpecificationInterface
      */
     private $shouldApprove;
+
+    /**
+     * @var ConsumerInterface
+     */
+    private $apiConsumer;
 
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $placeDenormalizer,
         ImageCollectionFactory $imageCollectionFactory,
         CommandBusInterface $commandBus,
-        ConsumerInterface $apiConsumer,
         ConsumerSpecificationInterface $shouldApprove
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->placeDenormalizer = $placeDenormalizer;
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
-        $this->apiConsumer = $apiConsumer;
         $this->shouldApprove = $shouldApprove;
+        $this->apiConsumer = null;
+    }
+
+    /**
+     * @param ConsumerInterface $consumer
+     * @return PlaceDocumentImporter
+     */
+    public function forConsumer(ConsumerInterface $consumer)
+    {
+        $c = clone $this;
+        $c->apiConsumer = $consumer;
+        return $c;
     }
 
     /**

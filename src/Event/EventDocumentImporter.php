@@ -7,12 +7,10 @@ use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
-use CultuurNet\UDB3\Event\Commands\CreateEvent;
 use CultuurNet\UDB3\Event\Commands\ImportLabels;
 use CultuurNet\UDB3\Event\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Event\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Event\Commands\ImportImages;
-use CultuurNet\UDB3\Event\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Event\Commands\UpdateAudience;
 use CultuurNet\UDB3\Event\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Event\Commands\UpdateCalendar;
@@ -30,12 +28,12 @@ use CultuurNet\UDB3\Event\ValueObjects\Audience;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
+use CultuurNet\UDB3\Model\Import\ConsumerAwareDocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
-use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
-class EventDocumentImporter implements DocumentImporterInterface
+class EventDocumentImporter implements ConsumerAwareDocumentImporterInterface
 {
     /**
      * @var RepositoryInterface
@@ -58,29 +56,39 @@ class EventDocumentImporter implements DocumentImporterInterface
     private $commandBus;
 
     /**
-     * @var ConsumerInterface
-     */
-    private $apiConsumer;
-
-    /**
      * @var ConsumerSpecificationInterface
      */
     private $shouldApprove;
+
+    /**
+     * @var ConsumerInterface|null
+     */
+    private $apiConsumer;
 
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $eventDenormalizer,
         ImageCollectionFactory $imageCollectionFactory,
         CommandBusInterface $commandBus,
-        ConsumerInterface $apiConsumer,
         ConsumerSpecificationInterface $shouldApprove
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->eventDenormalizer = $eventDenormalizer;
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
-        $this->apiConsumer = $apiConsumer;
         $this->shouldApprove = $shouldApprove;
+        $this->apiConsumer = null;
+    }
+
+    /**
+     * @param ConsumerInterface $consumer
+     * @return EventDocumentImporter
+     */
+    public function forConsumer(ConsumerInterface $consumer)
+    {
+        $c = clone $this;
+        $c->apiConsumer = $consumer;
+        return $c;
     }
 
     /**
@@ -133,7 +141,7 @@ class EventDocumentImporter implements DocumentImporterInterface
 
             // Events created by specific API partners should automatically be
             // approved.
-            if ($this->shouldApprove->satisfiedBy($this->apiConsumer)) {
+            if ($this->apiConsumer && $this->shouldApprove->satisfiedBy($this->apiConsumer)) {
                 $event->approve();
             }
 

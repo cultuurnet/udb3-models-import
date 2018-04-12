@@ -145,14 +145,13 @@ class EventDocumentImporterTest extends TestCase
         $this->consumer = $this->createMock(ConsumerInterface::class);
         $this->shouldApprove = $this->createMock(ConsumerSpecificationInterface::class);
 
-        $this->eventDocumentImporter = new EventDocumentImporter(
+        $this->eventDocumentImporter = (new EventDocumentImporter(
             $this->repository,
             $this->denormalizer,
             $this->imageCollectionFactory,
             $this->commandBus,
-            $this->consumer,
             $this->shouldApprove
-        );
+        ))->forConsumer($this->consumer);
 
         $this->termPreProcessingImporter = new TermPreProcessingDocumentImporter(
             $this->eventDocumentImporter,
