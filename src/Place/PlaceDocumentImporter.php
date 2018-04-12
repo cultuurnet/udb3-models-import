@@ -5,6 +5,8 @@ namespace CultuurNet\UDB3\Model\Import\Place;
 use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Model\Place\Place;
 use CultuurNet\UDB3\Place\Commands\ImportLabels;
@@ -51,16 +53,30 @@ class PlaceDocumentImporter implements DocumentImporterInterface
      */
     private $commandBus;
 
+    /**
+     * @var ConsumerInterface
+     */
+    private $apiConsumer;
+
+    /**
+     * @var ConsumerSpecificationInterface
+     */
+    private $shouldApprove;
+
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $placeDenormalizer,
         ImageCollectionFactory $imageCollectionFactory,
-        CommandBusInterface $commandBus
+        CommandBusInterface $commandBus,
+        ConsumerInterface $apiConsumer,
+        ConsumerSpecificationInterface $shouldApprove
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->placeDenormalizer = $placeDenormalizer;
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
+        $this->apiConsumer = $apiConsumer;
+        $this->shouldApprove = $shouldApprove;
     }
 
     /**
@@ -102,16 +118,23 @@ class PlaceDocumentImporter implements DocumentImporterInterface
                 $theme,
                 $publishDate
             );
-            $this->aggregateRepository->save($place);
 
             // New places created via the import API should always be set to
             // ready_for_validation.
-            // The publish date in PlaceCreated does not seem to trigger a
+            // The publish date in PLaceCreated does not seem to trigger a
             // wfStatus "ready_for_validation" on the json-ld so we manually
             // publish the place after creating it.
             // Existing places should always keep their original status, so
             // only do this publish command for new places.
-            $commands[] = new Publish($id, $publishDate);
+            $place->publish($publishDate);
+
+            // Places created by specific API partners should automatically be
+            // approved.
+            if ($this->shouldApprove->satisfiedBy($this->apiConsumer)) {
+                $place->approve();
+            }
+
+            $this->aggregateRepository->save($place);
         } else {
             $commands[] = new UpdateTitle(
                 $id,

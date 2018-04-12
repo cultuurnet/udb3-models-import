@@ -9,6 +9,8 @@ use CultuurNet\UDB3\Address\Address;
 use CultuurNet\UDB3\Address\Locality;
 use CultuurNet\UDB3\Address\PostalCode;
 use CultuurNet\UDB3\Address\Street;
+use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
 use CultuurNet\UDB3\BookingInfo;
 use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\CalendarType;
@@ -87,6 +89,16 @@ class PlaceDocumentImporterTest extends TestCase
     private $commandBus;
 
     /**
+     * @var ConsumerInterface|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $consumer;
+
+    /**
+     * @var ConsumerSpecificationInterface|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $shouldApprove;
+
+    /**
      * @var PlaceDocumentImporter
      */
     private $placeDocumentImporter;
@@ -107,12 +119,16 @@ class PlaceDocumentImporterTest extends TestCase
         $this->denormalizer = new PlaceDenormalizer();
         $this->imageCollectionFactory = $this->createMock(ImageCollectionFactory::class);
         $this->commandBus = new TraceableCommandBus();
+        $this->consumer = $this->createMock(ConsumerInterface::class);
+        $this->shouldApprove = $this->createMock(ConsumerSpecificationInterface::class);
 
         $this->placeDocumentImporter = new PlaceDocumentImporter(
             $this->repository,
             $this->denormalizer,
             $this->imageCollectionFactory,
-            $this->commandBus
+            $this->commandBus,
+            $this->consumer,
+            $this->shouldApprove
         );
 
         $this->termPreProcessingImporter = new TermPreProcessingDocumentImporter(
@@ -131,24 +147,24 @@ class PlaceDocumentImporterTest extends TestCase
         $document = $this->getPlaceDocument();
         $id = $document->getId();
 
-        $this->expectPlaceDoesNotExist($id);
-        $this->expectCreatePlace(
-            Place::createPlace(
-                $id,
-                new Language('nl'),
-                new Title('Voorbeeld naam'),
-                new EventType('0.14.0.0.0', 'Monument'),
-                new Address(
-                    new Street('Henegouwenkaai 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Brussel'),
-                    new Country(CountryCode::fromNative('BE'))
-                ),
-                new Calendar(CalendarType::PERMANENT()),
-                null,
-                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
-            )
+        $place = Place::createPlace(
+            $id,
+            new Language('nl'),
+            new Title('Voorbeeld naam'),
+            new EventType('0.14.0.0.0', 'Monument'),
+            new Address(
+                new Street('Henegouwenkaai 41-43'),
+                new PostalCode('1080'),
+                new Locality('Brussel'),
+                new Country(CountryCode::fromNative('BE'))
+            ),
+            new Calendar(CalendarType::PERMANENT()),
+            null
         );
+        $place->publish(\DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00'));
+
+        $this->expectPlaceDoesNotExist($id);
+        $this->expectCreatePlace($place);
         $this->expectNoImages();
 
         $this->commandBus->record();
@@ -156,10 +172,80 @@ class PlaceDocumentImporterTest extends TestCase
         $this->importer->import($document);
 
         $expectedCommands = [
-            new Publish(
+            new UpdateBookingInfo($id, new BookingInfo()),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new DeleteCurrentOrganizer($id),
+            new DeleteTypicalAgeRange($id),
+            new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
+            new UpdateTitle($id, new Language('en'), new Title('Example name')),
+            new UpdateAddress(
                 $id,
-                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
+                new Address(
+                    new Street('Quai du Hainaut 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Bruxelles'),
+                    new Country(CountryCode::fromNative('BE'))
+                ),
+                new Language('fr')
             ),
+            new UpdateAddress(
+                $id,
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussels'),
+                    new Country(CountryCode::fromNative('BE'))
+                ),
+                new Language('en')
+            ),
+            new ImportLabels($id, new Labels()),
+            new ImportImages($id, new ImageCollection()),
+        ];
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertEquals($expectedCommands, $recordedCommands);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_create_a_new_place_and_approve_it_if_no_aggregate_exists_and_the_consumer_can_approve()
+    {
+        $document = $this->getPlaceDocument();
+        $id = $document->getId();
+
+        $this->shouldApprove->expects($this->once())
+            ->method('satisfiedBy')
+            ->with($this->consumer)
+            ->willReturn(true);
+
+        $place = Place::createPlace(
+            $id,
+            new Language('nl'),
+            new Title('Voorbeeld naam'),
+            new EventType('0.14.0.0.0', 'Monument'),
+            new Address(
+                new Street('Henegouwenkaai 41-43'),
+                new PostalCode('1080'),
+                new Locality('Brussel'),
+                new Country(CountryCode::fromNative('BE'))
+            ),
+            new Calendar(CalendarType::PERMANENT()),
+            null
+        );
+        $place->publish(\DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00'));
+        $place->approve();
+
+        $this->expectPlaceDoesNotExist($id);
+        $this->expectCreatePlace($place);
+        $this->expectNoImages();
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $expectedCommands = [
             new UpdateBookingInfo($id, new BookingInfo()),
             new UpdateContactPoint($id, new ContactPoint()),
             new DeleteCurrentOrganizer($id),

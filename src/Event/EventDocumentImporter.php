@@ -5,6 +5,8 @@ namespace CultuurNet\UDB3\Model\Import\Event;
 use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
 use CultuurNet\UDB3\Event\Commands\CreateEvent;
 use CultuurNet\UDB3\Event\Commands\ImportLabels;
 use CultuurNet\UDB3\Event\Commands\DeleteCurrentOrganizer;
@@ -55,16 +57,30 @@ class EventDocumentImporter implements DocumentImporterInterface
      */
     private $commandBus;
 
+    /**
+     * @var ConsumerInterface
+     */
+    private $apiConsumer;
+
+    /**
+     * @var ConsumerSpecificationInterface
+     */
+    private $shouldApprove;
+
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $eventDenormalizer,
         ImageCollectionFactory $imageCollectionFactory,
-        CommandBusInterface $commandBus
+        CommandBusInterface $commandBus,
+        ConsumerInterface $apiConsumer,
+        ConsumerSpecificationInterface $shouldApprove
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->eventDenormalizer = $eventDenormalizer;
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
+        $this->apiConsumer = $apiConsumer;
+        $this->shouldApprove = $shouldApprove;
     }
 
     /**
@@ -103,10 +119,8 @@ class EventDocumentImporter implements DocumentImporterInterface
                 $type,
                 $location,
                 $calendar,
-                $theme,
-                $publishDate
+                $theme
             );
-            $this->aggregateRepository->save($event);
 
             // New events created via the import API should always be set to
             // ready_for_validation.
@@ -115,7 +129,15 @@ class EventDocumentImporter implements DocumentImporterInterface
             // publish the event after creating it.
             // Existing events should always keep their original status, so
             // only do this publish command for new events.
-            $commands[] = new Publish($id, $publishDate);
+            $event->publish($publishDate);
+
+            // Events created by specific API partners should automatically be
+            // approved.
+            if ($this->shouldApprove->satisfiedBy($this->apiConsumer)) {
+                $event->approve();
+            }
+
+            $this->aggregateRepository->save($event);
         } else {
             $commands[] = new UpdateTitle(
                 $id,

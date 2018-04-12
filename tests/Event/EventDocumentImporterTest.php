@@ -9,6 +9,8 @@ use CultuurNet\UDB3\Address\Address;
 use CultuurNet\UDB3\Address\Locality;
 use CultuurNet\UDB3\Address\PostalCode;
 use CultuurNet\UDB3\Address\Street;
+use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
 use CultuurNet\UDB3\BookingInfo;
 use CultuurNet\UDB3\Calendar;
 use CultuurNet\UDB3\CalendarType;
@@ -100,6 +102,16 @@ class EventDocumentImporterTest extends TestCase
     private $commandBus;
 
     /**
+     * @var ConsumerInterface|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $consumer;
+
+    /**
+     * @var ConsumerSpecificationInterface|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $shouldApprove;
+
+    /**
      * @var EventDocumentImporter
      */
     private $eventDocumentImporter;
@@ -130,12 +142,16 @@ class EventDocumentImporterTest extends TestCase
         $this->denormalizer = new EventDenormalizer();
         $this->imageCollectionFactory = $this->createMock(ImageCollectionFactory::class);
         $this->commandBus = new TraceableCommandBus();
+        $this->consumer = $this->createMock(ConsumerInterface::class);
+        $this->shouldApprove = $this->createMock(ConsumerSpecificationInterface::class);
 
         $this->eventDocumentImporter = new EventDocumentImporter(
             $this->repository,
             $this->denormalizer,
             $this->imageCollectionFactory,
-            $this->commandBus
+            $this->commandBus,
+            $this->consumer,
+            $this->shouldApprove
         );
 
         $this->termPreProcessingImporter = new TermPreProcessingDocumentImporter(
@@ -165,50 +181,116 @@ class EventDocumentImporterTest extends TestCase
         $document = $this->getEventDocument();
         $id = $document->getId();
 
+        $event = Event::create(
+            $id,
+            new Language('nl'),
+            new Title('Voorbeeld naam'),
+            new EventType('0.7.0.0.0', 'Begeleide rondleiding'),
+            new Location(
+                'f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0',
+                new StringLiteral('Voorbeeld locatienaam'),
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussel'),
+                    new Country(CountryCode::fromNative('BE'))
+                )
+            ),
+            new Calendar(
+                CalendarType::SINGLE(),
+                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
+                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00'),
+                [
+                    new Timestamp(
+                        \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
+                        \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00')
+                    ),
+                ],
+                []
+            ),
+            new Theme('1.17.0.0.0', 'Antiek en brocante')
+        );
+        $event->publish(\DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00'));
+
         $this->expectEventDoesNotExist($id);
         $this->expectNoImages();
-        $this->expectCreateEvent(
-            Event::create(
-                $id,
-                new Language('nl'),
-                new Title('Voorbeeld naam'),
-                new EventType('0.7.0.0.0', 'Begeleide rondleiding'),
-                new Location(
-                    'f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0',
-                    new StringLiteral('Voorbeeld locatienaam'),
-                    new Address(
-                        new Street('Henegouwenkaai 41-43'),
-                        new PostalCode('1080'),
-                        new Locality('Brussel'),
-                        new Country(CountryCode::fromNative('BE'))
-                    )
-                ),
-                new Calendar(
-                    CalendarType::SINGLE(),
-                    \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
-                    \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00'),
-                    [
-                        new Timestamp(
-                            \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
-                            \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00')
-                        ),
-                    ],
-                    []
-                ),
-                new Theme('1.17.0.0.0', 'Antiek en brocante'),
-                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
-            )
-        );
+        $this->expectCreateEvent($event);
 
         $this->commandBus->record();
 
         $this->importer->import($document);
 
         $expectedCommands = [
-            new Publish(
-                $id,
-                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00')
+            new UpdateAudience($id, new Audience(AudienceType::EVERYONE())),
+            new UpdateBookingInfo($id, new BookingInfo()),
+            new UpdateContactPoint($id, new ContactPoint()),
+            new DeleteCurrentOrganizer($id),
+            new DeleteTypicalAgeRange($id),
+            new UpdateTitle($id, new Language('fr'), new Title('Nom example')),
+            new UpdateTitle($id, new Language('en'), new Title('Example name')),
+            new ImportLabels($id, new Labels()),
+            new ImportImages($id, new ImageCollection()),
+        ];
+
+        $recordedCommands = $this->commandBus->getRecordedCommands();
+
+        $this->assertEquals($expectedCommands, $recordedCommands);
+    }
+
+    /**
+     * @test
+     */
+    public function it_should_create_an_new_event_and_approve_it_if_no_aggregate_exists_and_the_consumer_can_approve()
+    {
+        $document = $this->getEventDocument();
+        $id = $document->getId();
+
+        $this->shouldApprove->expects($this->once())
+            ->method('satisfiedBy')
+            ->with($this->consumer)
+            ->willReturn(true);
+
+        $event = Event::create(
+            $id,
+            new Language('nl'),
+            new Title('Voorbeeld naam'),
+            new EventType('0.7.0.0.0', 'Begeleide rondleiding'),
+            new Location(
+                'f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0',
+                new StringLiteral('Voorbeeld locatienaam'),
+                new Address(
+                    new Street('Henegouwenkaai 41-43'),
+                    new PostalCode('1080'),
+                    new Locality('Brussel'),
+                    new Country(CountryCode::fromNative('BE'))
+                )
             ),
+            new Calendar(
+                CalendarType::SINGLE(),
+                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
+                \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00'),
+                [
+                    new Timestamp(
+                        \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
+                        \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T17:00:00+01:00')
+                    ),
+                ],
+                []
+            ),
+            new Theme('1.17.0.0.0', 'Antiek en brocante')
+        );
+        $event->publish(\DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T00:00:00+01:00'));
+        $event->approve();
+
+        $this->expectEventDoesNotExist($id);
+        $this->expectNoImages();
+        $this->expectCreateEvent($event);
+
+        $this->commandBus->record();
+
+        $this->importer->import($document);
+
+        $expectedCommands = [
             new UpdateAudience($id, new Audience(AudienceType::EVERYONE())),
             new UpdateBookingInfo($id, new BookingInfo()),
             new UpdateContactPoint($id, new ContactPoint()),
