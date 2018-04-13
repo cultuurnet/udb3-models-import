@@ -122,13 +122,13 @@ class PlaceDocumentImporterTest extends TestCase
         $this->consumer = $this->createMock(ConsumerInterface::class);
         $this->shouldApprove = $this->createMock(ConsumerSpecificationInterface::class);
 
-        $this->placeDocumentImporter = (new PlaceDocumentImporter(
+        $this->placeDocumentImporter = new PlaceDocumentImporter(
             $this->repository,
             $this->denormalizer,
             $this->imageCollectionFactory,
             $this->commandBus,
             $this->shouldApprove
-        ))->forConsumer($this->consumer);
+        );
 
         $this->termPreProcessingImporter = new TermPreProcessingDocumentImporter(
             $this->placeDocumentImporter,
@@ -242,7 +242,7 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->commandBus->record();
 
-        $this->importer->import($document);
+        $this->importer->import($document, $this->consumer);
 
         $expectedCommands = [
             new UpdateBookingInfo($id, new BookingInfo()),

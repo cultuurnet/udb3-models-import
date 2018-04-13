@@ -28,12 +28,12 @@ use CultuurNet\UDB3\Event\ValueObjects\Audience;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
-use CultuurNet\UDB3\Model\Import\ConsumerAwareDocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
+use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
-class EventDocumentImporter implements ConsumerAwareDocumentImporterInterface
+class EventDocumentImporter implements DocumentImporterInterface
 {
     /**
      * @var RepositoryInterface
@@ -59,11 +59,6 @@ class EventDocumentImporter implements ConsumerAwareDocumentImporterInterface
      * @var ConsumerSpecificationInterface
      */
     private $shouldApprove;
-
-    /**
-     * @var ConsumerInterface|null
-     */
-    private $apiConsumer;
 
     public function __construct(
         RepositoryInterface $aggregateRepository,
@@ -94,7 +89,7 @@ class EventDocumentImporter implements ConsumerAwareDocumentImporterInterface
     /**
      * @inheritdoc
      */
-    public function import(DecodedDocument $decodedDocument)
+    public function import(DecodedDocument $decodedDocument, ConsumerInterface $consumer = null)
     {
         $id = $decodedDocument->getId();
 
@@ -141,7 +136,7 @@ class EventDocumentImporter implements ConsumerAwareDocumentImporterInterface
 
             // Events created by specific API partners should automatically be
             // approved.
-            if ($this->apiConsumer && $this->shouldApprove->satisfiedBy($this->apiConsumer)) {
+            if ($consumer && $this->shouldApprove->satisfiedBy($consumer)) {
                 $event->approve();
             }
 

@@ -2,6 +2,7 @@
 
 namespace CultuurNet\UDB3\Model\Import\PreProcessing;
 
+use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\Event\ReadModel\DocumentRepositoryInterface;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
@@ -44,8 +45,9 @@ class LocationPreProcessingDocumentImporter implements DocumentImporterInterface
      * Pre-processes the JSON to embed location properties based on the location id.
      *
      * @param DecodedDocument $decodedDocument
+     * @param ConsumerInterface|null $consumer
      */
-    public function import(DecodedDocument $decodedDocument)
+    public function import(DecodedDocument $decodedDocument, ConsumerInterface $consumer = null)
     {
         $data = $decodedDocument->getBody();
 
@@ -72,6 +74,6 @@ class LocationPreProcessingDocumentImporter implements DocumentImporterInterface
 
         $decodedDocument = $decodedDocument->withBody($data);
 
-        $this->jsonImporter->import($decodedDocument);
+        $this->jsonImporter->import($decodedDocument, $consumer);
     }
 }

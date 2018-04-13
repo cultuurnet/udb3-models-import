@@ -2,6 +2,7 @@
 
 namespace CultuurNet\UDB3\Model\Import\PreProcessing;
 
+use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\Label\LabelServiceInterface;
 use CultuurNet\UDB3\Label\ReadModels\JSON\Repository\ReadRepositoryInterface as LabelRepository;
 use CultuurNet\UDB3\Label\ReadModels\Relations\Repository\LabelRelation;
@@ -54,8 +55,9 @@ class LabelPreProcessingDocumentImporter implements DocumentImporterInterface
 
     /**
      * @param DecodedDocument $decodedDocument
+     * @param ConsumerInterface|null $consumer
      */
-    public function import(DecodedDocument $decodedDocument)
+    public function import(DecodedDocument $decodedDocument, ConsumerInterface $consumer = null)
     {
         $data = $decodedDocument->getBody();
         $id = $decodedDocument->getId();
@@ -134,6 +136,6 @@ class LabelPreProcessingDocumentImporter implements DocumentImporterInterface
         }
 
         $decodedDocument = $decodedDocument->withBody($data);
-        $this->jsonImporter->import($decodedDocument);
+        $this->jsonImporter->import($decodedDocument, $consumer);
     }
 }

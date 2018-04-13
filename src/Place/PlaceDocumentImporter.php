@@ -8,6 +8,7 @@ use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
 use CultuurNet\UDB3\Model\Import\ConsumerAwareDocumentImporterInterface;
+use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Model\Place\Place;
 use CultuurNet\UDB3\Place\Commands\ImportLabels;
@@ -30,7 +31,7 @@ use CultuurNet\UDB3\Place\Commands\UpdateTypicalAgeRange;
 use CultuurNet\UDB3\Place\Place as PlaceAggregate;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
-class PlaceDocumentImporter implements ConsumerAwareDocumentImporterInterface
+class PlaceDocumentImporter implements DocumentImporterInterface
 {
     /**
      * @var RepositoryInterface
@@ -57,11 +58,6 @@ class PlaceDocumentImporter implements ConsumerAwareDocumentImporterInterface
      */
     private $shouldApprove;
 
-    /**
-     * @var ConsumerInterface
-     */
-    private $apiConsumer;
-
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $placeDenormalizer,
@@ -74,24 +70,12 @@ class PlaceDocumentImporter implements ConsumerAwareDocumentImporterInterface
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
         $this->shouldApprove = $shouldApprove;
-        $this->apiConsumer = null;
-    }
-
-    /**
-     * @param ConsumerInterface $consumer
-     * @return PlaceDocumentImporter
-     */
-    public function forConsumer(ConsumerInterface $consumer)
-    {
-        $c = clone $this;
-        $c->apiConsumer = $consumer;
-        return $c;
     }
 
     /**
      * @inheritdoc
      */
-    public function import(DecodedDocument $decodedDocument)
+    public function import(DecodedDocument $decodedDocument, ConsumerInterface $consumer = null)
     {
         $id = $decodedDocument->getId();
 
@@ -139,7 +123,7 @@ class PlaceDocumentImporter implements ConsumerAwareDocumentImporterInterface
 
             // Places created by specific API partners should automatically be
             // approved.
-            if ($this->apiConsumer && $this->shouldApprove->satisfiedBy($this->apiConsumer)) {
+            if ($consumer && $this->shouldApprove->satisfiedBy($consumer)) {
                 $place->approve();
             }
 

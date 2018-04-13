@@ -5,6 +5,7 @@ namespace CultuurNet\UDB3\Model\Import\Organizer;
 use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
@@ -47,7 +48,7 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
     /**
      * @inheritdoc
      */
-    public function import(DecodedDocument $decodedDocument)
+    public function import(DecodedDocument $decodedDocument, ConsumerInterface $consumer = null)
     {
         $id = $decodedDocument->getId();
 
