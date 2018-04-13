@@ -139,7 +139,7 @@ class PlaceDocumentImporter implements ConsumerAwareDocumentImporterInterface
 
             // Places created by specific API partners should automatically be
             // approved.
-            if ($this->shouldApprove->satisfiedBy($this->apiConsumer)) {
+            if ($this->apiConsumer && $this->shouldApprove->satisfiedBy($this->apiConsumer)) {
                 $place->approve();
             }
 
