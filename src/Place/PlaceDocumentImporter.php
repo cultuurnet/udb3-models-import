@@ -5,13 +5,15 @@ namespace CultuurNet\UDB3\Model\Import\Place;
 use Broadway\CommandHandling\CommandBusInterface;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
+use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
+use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Model\Place\Place;
 use CultuurNet\UDB3\Place\Commands\ImportLabels;
 use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Place\Commands\ImportImages;
-use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateAddress;
 use CultuurNet\UDB3\Place\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
@@ -24,7 +26,6 @@ use CultuurNet\UDB3\Place\Commands\UpdateTitle;
 use CultuurNet\UDB3\Place\Commands\UpdateType;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
-use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Place\Commands\UpdateTypicalAgeRange;
 use CultuurNet\UDB3\Place\Place as PlaceAggregate;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
@@ -51,22 +52,29 @@ class PlaceDocumentImporter implements DocumentImporterInterface
      */
     private $commandBus;
 
+    /**
+     * @var ConsumerSpecificationInterface
+     */
+    private $shouldApprove;
+
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $placeDenormalizer,
         ImageCollectionFactory $imageCollectionFactory,
-        CommandBusInterface $commandBus
+        CommandBusInterface $commandBus,
+        ConsumerSpecificationInterface $shouldApprove
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->placeDenormalizer = $placeDenormalizer;
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
+        $this->shouldApprove = $shouldApprove;
     }
 
     /**
      * @inheritdoc
      */
-    public function import(DecodedDocument $decodedDocument)
+    public function import(DecodedDocument $decodedDocument, ConsumerInterface $consumer = null)
     {
         $id = $decodedDocument->getId();
 
@@ -102,16 +110,23 @@ class PlaceDocumentImporter implements DocumentImporterInterface
                 $theme,
                 $publishDate
             );
-            $this->aggregateRepository->save($place);
 
             // New places created via the import API should always be set to
             // ready_for_validation.
-            // The publish date in PlaceCreated does not seem to trigger a
+            // The publish date in PLaceCreated does not seem to trigger a
             // wfStatus "ready_for_validation" on the json-ld so we manually
             // publish the place after creating it.
             // Existing places should always keep their original status, so
             // only do this publish command for new places.
-            $commands[] = new Publish($id, $publishDate);
+            $place->publish($publishDate);
+
+            // Places created by specific API partners should automatically be
+            // approved.
+            if ($consumer && $this->shouldApprove->satisfiedBy($consumer)) {
+                $place->approve();
+            }
+
+            $this->aggregateRepository->save($place);
         } else {
             $commands[] = new UpdateTitle(
                 $id,
