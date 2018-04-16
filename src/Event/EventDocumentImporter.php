@@ -72,18 +72,6 @@ class EventDocumentImporter implements DocumentImporterInterface
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
         $this->shouldApprove = $shouldApprove;
-        $this->apiConsumer = null;
-    }
-
-    /**
-     * @param ConsumerInterface $consumer
-     * @return EventDocumentImporter
-     */
-    public function forConsumer(ConsumerInterface $consumer)
-    {
-        $c = clone $this;
-        $c->apiConsumer = $consumer;
-        return $c;
     }
 
     /**
