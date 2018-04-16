@@ -7,7 +7,6 @@ use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
-use CultuurNet\UDB3\Model\Import\ConsumerAwareDocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Model\Place\Place;
