@@ -36,7 +36,6 @@ use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
 use CultuurNet\UDB3\Place\Commands\ImportImages;
 use CultuurNet\UDB3\Place\Commands\ImportLabels;
-use CultuurNet\UDB3\Place\Commands\Moderation\Publish;
 use CultuurNet\UDB3\Place\Commands\UpdateBookingInfo;
 use CultuurNet\UDB3\Place\Commands\UpdateCalendar;
 use CultuurNet\UDB3\Place\Commands\UpdateContactPoint;
