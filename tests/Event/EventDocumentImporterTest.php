@@ -69,6 +69,7 @@ use CultuurNet\UDB3\Theme;
 use CultuurNet\UDB3\Timestamp;
 use CultuurNet\UDB3\Title;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use ValueObjects\Geography\Country;
 use ValueObjects\Geography\CountryCode;
 use ValueObjects\Identity\UUID;
@@ -148,7 +149,8 @@ class EventDocumentImporterTest extends TestCase
             $this->denormalizer,
             $this->imageCollectionFactory,
             $this->commandBus,
-            $this->shouldApprove
+            $this->shouldApprove,
+            new NullLogger()
         );
 
         $this->termPreProcessingImporter = new TermPreProcessingDocumentImporter(
