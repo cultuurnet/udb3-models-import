@@ -44,6 +44,7 @@ use CultuurNet\UDB3\Model\ValueObject\Web\WebsiteLink;
 use CultuurNet\UDB3\PriceInfo\BasePrice;
 use CultuurNet\UDB3\PriceInfo\Price;
 use CultuurNet\UDB3\Theme;
+use CultuurNet\UDB3\ValueObject\MultilingualString;
 use Money\Currency;
 use Money\Money;
 use PHPUnit\Framework\TestCase;
@@ -333,7 +334,7 @@ class Udb3ModelToLegacyOfferAdapterTest extends TestCase
         );
         $expected = $expected->withExtraTariff(
             new \CultuurNet\UDB3\PriceInfo\Tariff(
-                new StringLiteral('Senioren'),
+                new MultilingualString(new \CultuurNet\UDB3\Language('nl'), new StringLiteral('Senioren')),
                 new Price(1050),
                 \ValueObjects\Money\Currency::fromNative('EUR')
             )

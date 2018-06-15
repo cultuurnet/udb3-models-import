@@ -31,6 +31,8 @@ use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
 class EventDocumentImporter implements DocumentImporterInterface
@@ -60,18 +62,25 @@ class EventDocumentImporter implements DocumentImporterInterface
      */
     private $shouldApprove;
 
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $eventDenormalizer,
         ImageCollectionFactory $imageCollectionFactory,
         CommandBusInterface $commandBus,
-        ConsumerSpecificationInterface $shouldApprove
+        ConsumerSpecificationInterface $shouldApprove,
+        LoggerInterface $logger
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->eventDenormalizer = $eventDenormalizer;
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
         $this->shouldApprove = $shouldApprove;
+        $this->logger = $logger;
     }
 
     /**
@@ -80,6 +89,8 @@ class EventDocumentImporter implements DocumentImporterInterface
     public function import(DecodedDocument $decodedDocument, ConsumerInterface $consumer = null)
     {
         $id = $decodedDocument->getId();
+
+        $this->logger->log(LogLevel::DEBUG, $decodedDocument->toJson(), ['event_id' => $id]);
 
         try {
             $exists = !is_null($this->aggregateRepository->load($id));
@@ -193,8 +204,16 @@ class EventDocumentImporter implements DocumentImporterInterface
         $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
         $commands[] = new ImportImages($id, $images);
 
+        $command_classes = array_map(
+            'get_class',
+            $commands
+        );
+
+        $this->logger->log(LogLevel::DEBUG, 'commands to dispatch: @commands', ['@commands' => implode(', ', $command_classes)]);
+
         foreach ($commands as $command) {
             $this->commandBus->dispatch($command);
+            $this->logger->log(LogLevel::DEBUG, 'dispatched command: @class', ['@class' => get_class($command)]);
         }
     }
 }
