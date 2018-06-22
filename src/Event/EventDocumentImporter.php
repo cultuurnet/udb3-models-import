@@ -209,11 +209,32 @@ class EventDocumentImporter implements DocumentImporterInterface
             $commands
         );
 
-        $this->logger->log(LogLevel::DEBUG, 'commands to dispatch: @commands', ['@commands' => implode(', ', $command_classes)]);
+        $logContext = [
+            'entity_id' => $id,
+        ];
+
+        $this->logger->log(
+            LogLevel::DEBUG,
+            'commands to dispatch for import of entity {entity_id}: {commands}',
+            $logContext + [
+                'commands' => implode(', ', $command_classes)
+            ]
+        );
 
         foreach ($commands as $command) {
-            $this->commandBus->dispatch($command);
-            $this->logger->log(LogLevel::DEBUG, 'dispatched command: @class', ['@class' => get_class($command)]);
+            $command_id = $this->commandBus->dispatch($command);
+            if (empty($command_id)) {
+                $command_id = '(((empty)))';
+            }
+
+            $this->logger->log(
+                LogLevel::DEBUG,
+                'dispatched command: {class} with id {command_id}, targeting event {entity_id}',
+                $logContext + [
+                    'class' => get_class($command),
+                    'command_id' => $command_id,
+                ]
+            );
         }
     }
 }
