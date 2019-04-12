@@ -9,7 +9,9 @@ use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\Language;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
+use CultuurNet\UDB3\Model\Import\Taxonomy\Label\LockedLabelRepository;
 use CultuurNet\UDB3\Model\Organizer\Organizer;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use CultuurNet\UDB3\Organizer\Commands\ImportLabels;
 use CultuurNet\UDB3\Organizer\Commands\UpdateAddress;
 use CultuurNet\UDB3\Organizer\Commands\UpdateContactPoint;
@@ -35,14 +37,21 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
      */
     private $commandBus;
 
+    /**
+     * @var LockedLabelRepository
+     */
+    private $lockedLabelRepository;
+
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $organizerDenormalizer,
-        CommandBusInterface $commandBus
+        CommandBusInterface $commandBus,
+        LockedLabelRepository $lockedLabelRepository
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->organizerDenormalizer = $organizerDenormalizer;
         $this->commandBus = $commandBus;
+        $this->lockedLabelRepository= $lockedLabelRepository;
     }
 
     /**
@@ -100,7 +109,13 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
             $commands[] = new UpdateTitle($id, $title, $language);
         }
 
-        $commands[] = new ImportLabels($id, $import->getLabels());
+        $lockedLabels = $this->lockedLabelRepository->getLockedLabelsForItem($id);
+        $importLabels = $import->getLabels()->filter(function(Label $label) use ($lockedLabels) {
+            return !$lockedLabels->contains($label);
+        });
+
+        $commands[] = (new ImportLabels($id, $importLabels))
+            ->withLabelsToKeepIfAlreadyOnOrganizer($lockedLabels);
 
         foreach ($commands as $command) {
             $this->commandBus->dispatch($command);
