@@ -577,7 +577,6 @@ class PlaceDocumentImporterTest extends TestCase
         $body['labels'] = [
             'foo',
             'bar',
-            'locked1',
         ];
         $body['hiddenLabels'] = [
             'lorem',

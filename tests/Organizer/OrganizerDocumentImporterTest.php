@@ -267,7 +267,6 @@ class OrganizerDocumentImporterTest extends TestCase
                 'labels' => [
                     'foo',
                     'bar',
-                    'locked1',
                 ]
             ]
             +

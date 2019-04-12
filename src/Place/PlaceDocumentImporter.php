@@ -198,11 +198,7 @@ class PlaceDocumentImporter implements DocumentImporterInterface
         }
 
         $lockedLabels = $this->lockedLabelRepository->getLockedLabelsForItem($id);
-        $importLabels = $import->getLabels()->filter(function(Label $label) use ($lockedLabels) {
-            return !$lockedLabels->contains($label);
-        });
-
-        $commands[] = (new ImportLabels($id, $importLabels))
+        $commands[] = (new ImportLabels($id, $import->getLabels()))
             ->withLabelsToKeepIfAlreadyOnOffer($lockedLabels);
 
         $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
