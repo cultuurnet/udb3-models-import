@@ -360,7 +360,10 @@ class Udb3ModelToLegacyOfferAdapterTest extends TestCase
     {
         $expected = new \CultuurNet\UDB3\BookingInfo(
             'https://www.publiq.be',
-            'Publiq',
+            new MultilingualString(
+                new \CultuurNet\UDB3\Language('nl'),
+                new StringLiteral('Publiq')
+            ),
             '044/444444',
             'info@publiq.be',
             new \DateTimeImmutable('2018-01-01T10:00:00+01:00'),
