@@ -92,7 +92,7 @@ class OrganizerDocumentImporter implements DocumentImporterInterface
 
         $address = $adapter->getAddress();
         if ($address) {
-            $commands[] = new UpdateAddress($id, $address);
+            $commands[] = new UpdateAddress($id, $address, $mainLanguage);
         }
 
         foreach ($adapter->getTitleTranslations() as $language => $title) {

@@ -203,7 +203,8 @@ class OrganizerDocumentImporterTest extends TestCase
                     new PostalCode('1080'),
                     new Locality('Brussel'),
                     Country::fromNative('BE')
-                )
+                ),
+                new Language('nl')
             ),
             $recordedCommands
         );
