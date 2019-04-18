@@ -9,7 +9,9 @@ use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
+use CultuurNet\UDB3\Model\Import\Taxonomy\Label\LockedLabelRepository;
 use CultuurNet\UDB3\Model\Place\Place;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use CultuurNet\UDB3\Place\Commands\ImportLabels;
 use CultuurNet\UDB3\Place\Commands\DeleteCurrentOrganizer;
 use CultuurNet\UDB3\Place\Commands\DeleteTypicalAgeRange;
@@ -57,17 +59,24 @@ class PlaceDocumentImporter implements DocumentImporterInterface
      */
     private $shouldApprove;
 
+    /**
+     * @var LockedLabelRepository
+     */
+    private $lockedLabelRepository;
+
     public function __construct(
         RepositoryInterface $aggregateRepository,
         DenormalizerInterface $placeDenormalizer,
         ImageCollectionFactory $imageCollectionFactory,
         CommandBusInterface $commandBus,
-        ConsumerSpecificationInterface $shouldApprove
+        ConsumerSpecificationInterface $shouldApprove,
+        LockedLabelRepository $lockedLabelRepository
     ) {
         $this->aggregateRepository = $aggregateRepository;
         $this->placeDenormalizer = $placeDenormalizer;
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
+        $this->lockedLabelRepository = $lockedLabelRepository;
         $this->shouldApprove = $shouldApprove;
     }
 
@@ -188,7 +197,9 @@ class PlaceDocumentImporter implements DocumentImporterInterface
             $commands[] = new UpdateAddress($id, $address, $language);
         }
 
-        $commands[] = new ImportLabels($id, $import->getLabels());
+        $lockedLabels = $this->lockedLabelRepository->getLockedLabelsForItem($id);
+        $commands[] = (new ImportLabels($id, $import->getLabels()))
+            ->withLabelsToKeepIfAlreadyOnOffer($lockedLabels);
 
         $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
         $commands[] = new ImportImages($id, $images);

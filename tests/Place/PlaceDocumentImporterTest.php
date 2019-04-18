@@ -22,6 +22,7 @@ use CultuurNet\UDB3\Media\Properties\CopyrightHolder;
 use CultuurNet\UDB3\Media\Properties\Description as ImageDescription;
 use CultuurNet\UDB3\Media\Properties\MIMEType;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
+use CultuurNet\UDB3\Model\Import\Taxonomy\Label\LockedLabelRepository;
 use CultuurNet\UDB3\Model\ValueObject\Identity\UUID as Udb3ModelUUID;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\CopyrightHolder as Udb3ModelCopyrightHolder;
 use CultuurNet\UDB3\Model\ValueObject\MediaObject\MediaObjectReference;
@@ -98,6 +99,11 @@ class PlaceDocumentImporterTest extends TestCase
     private $shouldApprove;
 
     /**
+     * @var LockedLabelRepository|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $lockedLabelRepository;
+
+    /**
      * @var PlaceDocumentImporter
      */
     private $placeDocumentImporter;
@@ -120,13 +126,15 @@ class PlaceDocumentImporterTest extends TestCase
         $this->commandBus = new TraceableCommandBus();
         $this->consumer = $this->createMock(ConsumerInterface::class);
         $this->shouldApprove = $this->createMock(ConsumerSpecificationInterface::class);
+        $this->lockedLabelRepository = $this->createMock(LockedLabelRepository::class);
 
         $this->placeDocumentImporter = new PlaceDocumentImporter(
             $this->repository,
             $this->denormalizer,
             $this->imageCollectionFactory,
             $this->commandBus,
-            $this->shouldApprove
+            $this->shouldApprove,
+            $this->lockedLabelRepository
         );
 
         $this->termPreProcessingImporter = new TermPreProcessingDocumentImporter(
@@ -164,6 +172,7 @@ class PlaceDocumentImporterTest extends TestCase
         $this->expectPlaceDoesNotExist($id);
         $this->expectCreatePlace($place);
         $this->expectNoImages();
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -238,6 +247,7 @@ class PlaceDocumentImporterTest extends TestCase
         $this->expectPlaceDoesNotExist($id);
         $this->expectCreatePlace($place);
         $this->expectNoImages();
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -289,6 +299,7 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->expectPlaceExists($id);
         $this->expectNoImages();
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -359,6 +370,7 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->expectPlaceExists($id);
         $this->expectNoImages();
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -392,6 +404,7 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->expectPlaceExists($id);
         $this->expectNoImages();
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -418,6 +431,7 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->expectPlaceExists($id);
         $this->expectNoImages();
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -451,6 +465,7 @@ class PlaceDocumentImporterTest extends TestCase
 
         $this->expectPlaceExists($id);
         $this->expectNoImages();
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -497,6 +512,7 @@ class PlaceDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectPlaceExists($id);
+        $this->expectNoLockedLabels();
 
         $expectedImages = ImageCollection::fromArray(
             [
@@ -572,6 +588,15 @@ class PlaceDocumentImporterTest extends TestCase
         $this->expectPlaceExists($id);
         $this->expectNoImages();
 
+        $lockedLabels = new Labels(
+            new Label(new LabelName('locked1')),
+            new Label(new LabelName('locked2'))
+        );
+        $this->lockedLabelRepository->expects($this->once())
+            ->method('getLockedLabelsForItem')
+            ->with($id)
+            ->willReturn($lockedLabels);
+
         $this->commandBus->record();
 
         $this->importer->import($document);
@@ -579,15 +604,17 @@ class PlaceDocumentImporterTest extends TestCase
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
         $this->assertContainsObject(
-            new ImportLabels(
-                $this->getPlaceId(),
-                new Labels(
-                    new Label(new LabelName('foo'), true),
-                    new Label(new LabelName('bar'), true),
-                    new Label(new LabelName('lorem'), false),
-                    new Label(new LabelName('ipsum'), false)
+            (
+                new ImportLabels(
+                    $this->getPlaceId(),
+                    new Labels(
+                        new Label(new LabelName('foo'), true),
+                        new Label(new LabelName('bar'), true),
+                        new Label(new LabelName('lorem'), false),
+                        new Label(new LabelName('ipsum'), false)
+                    )
                 )
-            ),
+            )->withLabelsToKeepIfAlreadyOnOffer($lockedLabels),
             $recordedCommands
         );
     }
@@ -686,6 +713,13 @@ class PlaceDocumentImporterTest extends TestCase
         $this->imageCollectionFactory->expects($this->any())
             ->method('fromMediaObjectReferences')
             ->willReturn(new ImageCollection());
+    }
+
+    private function expectNoLockedLabels()
+    {
+        $this->lockedLabelRepository->expects($this->any())
+            ->method('getLockedLabelsForItem')
+            ->willReturn(new Labels());
     }
 
     private function assertContainsObject($needle, array $haystack)

@@ -5,6 +5,7 @@ namespace CultuurNet\UDB3\Model\Import\Organizer;
 use Broadway\CommandHandling\Testing\TraceableCommandBus;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
+use CultuurNet\UDB3\Model\Import\Taxonomy\Label\LockedLabelRepository;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\LabelName;
 use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Labels;
@@ -47,6 +48,11 @@ class OrganizerDocumentImporterTest extends TestCase
     private $commandBus;
 
     /**
+     * @var LockedLabelRepository|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $lockedLabelRepository;
+
+    /**
      * @var OrganizerDocumentImporter
      */
     private $organizerDocumentImporter;
@@ -61,11 +67,13 @@ class OrganizerDocumentImporterTest extends TestCase
         $this->repository = $this->createMock(RepositoryInterface::class);
         $this->denormalizer = new OrganizerDenormalizer();
         $this->commandBus = new TraceableCommandBus();
+        $this->lockedLabelRepository = $this->createMock(LockedLabelRepository::class);
 
         $this->organizerDocumentImporter = new OrganizerDocumentImporter(
             $this->repository,
             $this->denormalizer,
-            $this->commandBus
+            $this->commandBus,
+            $this->lockedLabelRepository
         );
 
         $this->importer = $this->organizerDocumentImporter;
@@ -88,6 +96,7 @@ class OrganizerDocumentImporterTest extends TestCase
                 new Title('Voorbeeld naam')
             )
         );
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -114,6 +123,7 @@ class OrganizerDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectOrganizerExists($id);
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -143,6 +153,15 @@ class OrganizerDocumentImporterTest extends TestCase
 
         $this->expectOrganizerExists($id);
 
+        $lockedLabels = new Labels(
+            new Label(new LabelName('locked1')),
+            new Label(new LabelName('locked2'))
+        );
+        $this->lockedLabelRepository->expects($this->once())
+            ->method('getLockedLabelsForItem')
+            ->with($id)
+            ->willReturn($lockedLabels);
+
         $this->commandBus->record();
 
         $this->importer->import($document);
@@ -150,15 +169,17 @@ class OrganizerDocumentImporterTest extends TestCase
         $recordedCommands = $this->commandBus->getRecordedCommands();
 
         $this->assertContainsObject(
-            new ImportLabels(
-                $this->getOrganizerId(),
-                new Labels(
-                    new Label(new LabelName('foo'), true),
-                    new Label(new LabelName('bar'), true),
-                    new Label(new LabelName('lorem'), false),
-                    new Label(new LabelName('ipsum'), false)
+            (
+                new ImportLabels(
+                    $this->getOrganizerId(),
+                    new Labels(
+                        new Label(new LabelName('foo'), true),
+                        new Label(new LabelName('bar'), true),
+                        new Label(new LabelName('lorem'), false),
+                        new Label(new LabelName('ipsum'), false)
+                    )
                 )
-            ),
+            )->withLabelsToKeepIfAlreadyOnOrganizer($lockedLabels),
             $recordedCommands
         );
     }
@@ -188,6 +209,7 @@ class OrganizerDocumentImporterTest extends TestCase
         $id = $document->getId();
 
         $this->expectOrganizerExists($id);
+        $this->expectNoLockedLabels();
 
         $this->commandBus->record();
 
@@ -298,6 +320,13 @@ class OrganizerDocumentImporterTest extends TestCase
             ->with($this->callback(function (Organizer $organizer) use ($expectedOrganizer) {
                 return $expectedOrganizer->getAggregateRootId() === $organizer->getAggregateRootId();
             }));
+    }
+
+    private function expectNoLockedLabels()
+    {
+        $this->lockedLabelRepository->expects($this->any())
+            ->method('getLockedLabelsForItem')
+            ->willReturn(new Labels());
     }
 
     private function assertContainsObject($needle, array $haystack)
