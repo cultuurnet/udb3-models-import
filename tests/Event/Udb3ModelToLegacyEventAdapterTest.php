@@ -2,7 +2,7 @@
 
 namespace CultuurNet\UDB3\Model\Import\Event;
 
-use CultuurNet\UDB3\Location\Location;
+use CultuurNet\UDB3\Event\ValueObjects\LocationId;
 use CultuurNet\UDB3\Model\Event\ImmutableEvent;
 use CultuurNet\UDB3\Model\Import\Offer\Udb3ModelToLegacyOfferAdapter;
 use CultuurNet\UDB3\Model\Place\ImmutablePlace;
@@ -115,16 +115,7 @@ class Udb3ModelToLegacyEventAdapterTest extends TestCase
      */
     public function it_should_return_the_embedded_location()
     {
-        $expected = new Location(
-            '6ba87a6b-efea-4467-9e87-458d145384d9',
-            new StringLiteral('Voorbeeld titel'),
-            new \CultuurNet\UDB3\Address\Address(
-                new \CultuurNet\UDB3\Address\Street('Henegouwenkaai 41-43'),
-                new \CultuurNet\UDB3\Address\PostalCode('1080'),
-                new \CultuurNet\UDB3\Address\Locality('Brussel'),
-                new Country(\ValueObjects\Geography\CountryCode::fromNative('BE'))
-            )
-        );
+        $expected = new LocationId('6ba87a6b-efea-4467-9e87-458d145384d9');
         $actual = $this->adapter->getLocation();
         $this->assertEquals($expected, $actual);
     }
@@ -147,18 +138,5 @@ class Udb3ModelToLegacyEventAdapterTest extends TestCase
         $expected = \CultuurNet\UDB3\Event\ValueObjects\AudienceType::MEMBERS();
         $actual = $this->completeAdapter->getAudienceType();
         $this->assertEquals($expected, $actual);
-    }
-
-    /**
-     * @test
-     */
-    public function it_should_throw_an_exception_if_an_event_without_embedded_place_is_injected()
-    {
-        $placeReference = PlaceReference::createWithPlaceId(new UUID('6ba87a6b-efea-4467-9e87-458d145384d9'));
-        $event = $this->event->withPlaceReference($placeReference);
-
-        $this->expectException(\InvalidArgumentException::class);
-
-        new Udb3ModelToLegacyEventAdapter($event);
     }
 }
