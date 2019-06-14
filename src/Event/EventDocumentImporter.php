@@ -31,6 +31,8 @@ use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
+use CultuurNet\UDB3\Model\Import\Taxonomy\Label\LockedLabelRepository;
+use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
@@ -63,6 +65,11 @@ class EventDocumentImporter implements DocumentImporterInterface
     private $shouldApprove;
 
     /**
+     * @var LockedLabelRepository
+     */
+    private $lockedLabelRepository;
+
+    /**
      * @var LoggerInterface
      */
     private $logger;
@@ -73,6 +80,7 @@ class EventDocumentImporter implements DocumentImporterInterface
         ImageCollectionFactory $imageCollectionFactory,
         CommandBusInterface $commandBus,
         ConsumerSpecificationInterface $shouldApprove,
+        LockedLabelRepository $lockedLabelRepository,
         LoggerInterface $logger
     ) {
         $this->aggregateRepository = $aggregateRepository;
@@ -80,6 +88,7 @@ class EventDocumentImporter implements DocumentImporterInterface
         $this->imageCollectionFactory = $imageCollectionFactory;
         $this->commandBus = $commandBus;
         $this->shouldApprove = $shouldApprove;
+        $this->lockedLabelRepository = $lockedLabelRepository;
         $this->logger = $logger;
     }
 
@@ -199,7 +208,9 @@ class EventDocumentImporter implements DocumentImporterInterface
             $commands[] = new UpdateDescription($id, $language, $description);
         }
 
-        $commands[] = new ImportLabels($id, $import->getLabels());
+        $lockedLabels = $this->lockedLabelRepository->getLockedLabelsForItem($id);
+        $commands[] = (new ImportLabels($id, $import->getLabels()))
+            ->withLabelsToKeepIfAlreadyOnOffer($lockedLabels);
 
         $images = $this->imageCollectionFactory->fromMediaObjectReferences($import->getMediaObjectReferences());
         $commands[] = new ImportImages($id, $images);
