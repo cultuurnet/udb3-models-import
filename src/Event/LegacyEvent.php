@@ -3,15 +3,15 @@
 namespace CultuurNet\UDB3\Model\Import\Event;
 
 use CultuurNet\UDB3\Event\ValueObjects\AudienceType;
-use CultuurNet\UDB3\Location\Location;
+use CultuurNet\UDB3\Event\ValueObjects\LocationId;
 use CultuurNet\UDB3\Model\Import\Offer\LegacyOffer;
 
 interface LegacyEvent extends LegacyOffer
 {
     /**
-     * @return Location
+     * @return LocationId
      */
-    public function getLocation();
+    public function getLocation(): LocationId;
 
     /**
      * @return AudienceType

@@ -5,10 +5,6 @@ namespace CultuurNet\UDB3\Model\Import\Event;
 use Broadway\CommandHandling\Testing\TraceableCommandBus;
 use Broadway\Repository\AggregateNotFoundException;
 use Broadway\Repository\RepositoryInterface;
-use CultuurNet\UDB3\Address\Address;
-use CultuurNet\UDB3\Address\Locality;
-use CultuurNet\UDB3\Address\PostalCode;
-use CultuurNet\UDB3\Address\Street;
 use CultuurNet\UDB3\ApiGuard\Consumer\ConsumerInterface;
 use CultuurNet\UDB3\ApiGuard\Consumer\Specification\ConsumerSpecificationInterface;
 use CultuurNet\UDB3\BookingInfo;
@@ -37,9 +33,8 @@ use CultuurNet\UDB3\Event\EventType;
 use CultuurNet\UDB3\Event\ReadModel\InMemoryDocumentRepository;
 use CultuurNet\UDB3\Event\ValueObjects\Audience;
 use CultuurNet\UDB3\Event\ValueObjects\AudienceType;
+use CultuurNet\UDB3\Event\ValueObjects\LocationId;
 use CultuurNet\UDB3\Language;
-use CultuurNet\UDB3\Location\Location;
-use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Media\Image;
 use CultuurNet\UDB3\Media\ImageCollection;
 use CultuurNet\UDB3\Media\Properties\CopyrightHolder;
@@ -71,12 +66,9 @@ use CultuurNet\UDB3\Timestamp;
 use CultuurNet\UDB3\Title;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
-use ValueObjects\Geography\Country;
-use ValueObjects\Geography\CountryCode;
 use ValueObjects\Identity\UUID;
 use ValueObjects\Money\Currency;
 use ValueObjects\Person\Age;
-use ValueObjects\StringLiteral\StringLiteral;
 use ValueObjects\Web\Url;
 
 class EventDocumentImporterTest extends TestCase
@@ -193,16 +185,7 @@ class EventDocumentImporterTest extends TestCase
             new Language('nl'),
             new Title('Voorbeeld naam'),
             new EventType('0.7.0.0.0', 'Begeleide rondleiding'),
-            new Location(
-                'f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0',
-                new StringLiteral('Voorbeeld locatienaam'),
-                new Address(
-                    new Street('Henegouwenkaai 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Brussel'),
-                    new Country(CountryCode::fromNative('BE'))
-                )
-            ),
+            new LocationId('f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0'),
             new Calendar(
                 CalendarType::SINGLE(),
                 \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),
@@ -263,16 +246,7 @@ class EventDocumentImporterTest extends TestCase
             new Language('nl'),
             new Title('Voorbeeld naam'),
             new EventType('0.7.0.0.0', 'Begeleide rondleiding'),
-            new Location(
-                'f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0',
-                new StringLiteral('Voorbeeld locatienaam'),
-                new Address(
-                    new Street('Henegouwenkaai 41-43'),
-                    new PostalCode('1080'),
-                    new Locality('Brussel'),
-                    new Country(CountryCode::fromNative('BE'))
-                )
-            ),
+            new LocationId('f3277646-1cc8-4af9-b6d5-a47f3c4f2ac0'),
             new Calendar(
                 CalendarType::SINGLE(),
                 \DateTimeImmutable::createFromFormat(\DATE_ATOM, '2018-01-01T12:00:00+01:00'),

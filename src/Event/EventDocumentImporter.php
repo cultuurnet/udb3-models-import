@@ -25,14 +25,13 @@ use CultuurNet\UDB3\Event\Commands\UpdateType;
 use CultuurNet\UDB3\Event\Commands\UpdateTypicalAgeRange;
 use CultuurNet\UDB3\Event\Event as EventAggregate;
 use CultuurNet\UDB3\Event\ValueObjects\Audience;
+use CultuurNet\UDB3\Event\ValueObjects\LocationId;
 use CultuurNet\UDB3\Language;
-use CultuurNet\UDB3\Location\LocationId;
 use CultuurNet\UDB3\Model\Event\Event;
 use CultuurNet\UDB3\Model\Import\DecodedDocument;
 use CultuurNet\UDB3\Model\Import\DocumentImporterInterface;
 use CultuurNet\UDB3\Model\Import\MediaObject\ImageCollectionFactory;
 use CultuurNet\UDB3\Model\Import\Taxonomy\Label\LockedLabelRepository;
-use CultuurNet\UDB3\Model\ValueObject\Taxonomy\Label\Label;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
@@ -157,7 +156,7 @@ class EventDocumentImporter implements DocumentImporterInterface
             );
 
             $commands[] = new UpdateType($id, $type);
-            $commands[] = new UpdateLocation($id, new LocationId($location->getCdbid()));
+            $commands[] = new UpdateLocation($id, $location);
             $commands[] = new UpdateCalendar($id, $calendar);
 
             if ($theme) {
